@@ -6,9 +6,9 @@ This repository serves as my personal documentation hub and portfolio of learnin
 
 The ProDev program is an intensive, hands-on journey into the world of modern, enterprise-level software engineering. The curriculum was designed to bridge the gap between knowing a technology (like Python) and understanding how to use it to build robust, scalable, and maintainable applications.
 
-My journey progressed from advanced Python concepts—like building practical database toolkits with decorators—to iteratively developing a complete travel booking platform. This flagship project evolved from a simple Django application into a full-featured system complete with:
+My journey progressed from advanced Python concepts; like building practical database toolkits with decorators to iteratively developing a complete travel booking platform. This flagship project evolved from a simple Django application into a full-featured system complete with:
 
-* A secure **Chapa payment gateway** integration.
+* A secure **Chapa payment gateway** integration (**in test mode**).
 
 * An asynchronous **Celery task queue** with a **RabbitMQ** broker for handling email notifications.
 
@@ -118,6 +118,7 @@ Beyond specific tools, this program changed how I *think* about building softwar
 ## Project Repository Summary
 
 | **Project** | **Focus Area** | **Key Technologies** |
+| :--- | :--- | :--- |
 | [`alx-backend-python`](https://www.github.com/alenstein/alx-backend-python) | Python & Django Advanced | Django, Middleware, Docker, Kubernetes, Jenkins, GitHub Actions |
 | [`alx_travel_app`](https://www.github.com/alenstein/) (0x00-0x03) | Full-Stack Application | Django, DRF, PostgreSQL, Celery, RabbitMQ, Chapa Payment API |
 | [`alx-backend-caching_property_listings`](https://www.github.com/alenstein/alx-backend-caching_property_listings) | Performance Optimization | Redis, Django Signals, Docker, PostgreSQL |
