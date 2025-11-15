@@ -115,7 +115,7 @@ Beyond specific tools, this program changed how I *think* about building softwar
 6. **LAST BUT NOT LEAST:** Find a good compromise between speed and execution, In high-pressure programs like ALX ProDev BE, you're forced to abandon both sloppy, rushed work and time-wasting perfectionism, learning instead to make strategic, professional compromises to deliver quality code against a hard deadline.
 
 
-## Project Repository Summary
+## Reference Summary
 
 | **Project** | **Focus Area** | **Key Technologies** |
 | :--- | :--- | :--- |
@@ -125,3 +125,54 @@ Beyond specific tools, this program changed how I *think* about building softwar
 | [`alx-backend-graphql_crm`](https://www.github.com/alenstein/alx-backend-graphql_crm) | Task Automation & GraphQL | GraphQL, Celery, django-cron, Crontab |
 | [`ALXprodev-advanced_git`](https://www.github.com/alenstein/ALXprodev-advanced_git) | Version Control | Git Workflows, Branching Strategies |
 | [`ALXprodev-Devops`](https://www.github.com/alenstein/ALXprodev-Devops) | Shell Scripting & Automation | Bash, API Automation, Data Processing |
+
+# Capstone project - E_Commerce Backend 
+
+## Overview
+
+This project involves  developing a robust backend system to support an e-commerce product catalog. The main aim it to be able to handle all product data management, implementing secure user authentication, and building a comprehensive API. This project simulates a real-world development environment, challenging students to prioritise scalability, security, and performance in their implementation.
+
+## Project Goals
+
+The primary objectives  are:
+
+* **Build CRUD APIs:** Construct and document APIs for managing products, categories, and user authentication.
+
+* **Implement Core E-commerce Logic:** Implement robust logic for efficient product discovery, including filtering, sorting, and pagination.
+
+* **Optimize the Database:** Design and optimize a high-performance relational database schema to support seamless and fast queries.
+
+## Technologies to be Used
+
+The  following technology stack will be utilized to complete the project:
+
+* **Django:** To build the scalable backend framework.
+
+* **PostgreSQL:** As the relational database for optimized performance.
+
+* **JWT (JSON Web Tokens):** For implementing secure user authentication.
+
+* **Swagger / OpenAPI:** To document and test the completed APIs.
+
+## Key Features and Deliverables
+
+The final implementation will include the following key features:
+
+### 1. CRUD Operations
+
+* Complete Create, Read, Update, and Delete (CRUD) operations for products and categories.
+
+* Secure user authentication and management features (e.g., registration, login, profile management) using JWT.
+
+### 2. Advanced API Features
+
+* **Filtering and Sorting:** The API will allow users to filter products by category and sort them by price.
+
+* **Pagination:** paginated responses will be implemented o ensure the backend can efficiently handle large product datasets.
+
+### 3. API Documentation
+
+* **Swagger** will be used to generate comprehensive API documentation.
+
+* A final deliverable will be to publish these API docs in a hosted format, making them easily consumable by a potential frontend team.
+
