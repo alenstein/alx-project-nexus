@@ -29,7 +29,6 @@ class ProductListView(generics.ListAPIView):
     serializer_class = ProductListSerializer
     permission_classes = [AllowAny]
     filterset_class = ProductFilter
-    # Update ordering fields to use the annotated field 'price'
     ordering_fields = ['price', 'name']
     search_fields = ['name', 'description']
 
@@ -45,7 +44,8 @@ class ProductListView(generics.ListAPIView):
         queryset = queryset.annotate(
             price=Min('items__original_price')
         )
-        return queryset.distinct()
+        # Add a default ordering to ensure consistent pagination
+        return queryset.distinct().order_by('id')
 
 class ProductDetailView(generics.RetrieveAPIView):
     """
