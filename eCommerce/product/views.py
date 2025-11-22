@@ -1,3 +1,4 @@
+from django.db.models import Min
 from rest_framework import generics
 from rest_framework.permissions import AllowAny
 from .models import Product, ProductCategory, Brand
@@ -28,17 +29,23 @@ class ProductListView(generics.ListAPIView):
     serializer_class = ProductListSerializer
     permission_classes = [AllowAny]
     filterset_class = ProductFilter
-    ordering_fields = ['items__original_price', 'name']
+    # Update ordering fields to use the annotated field 'price'
+    ordering_fields = ['price', 'name']
     search_fields = ['name', 'description']
 
     def get_queryset(self):
         """
-        Optimized queryset to prevent N+1 query problems.
-        Prefetches related items and their default images in a minimal number of queries.
+        Optimized queryset that annotates the minimum price for sorting
+        and prefetches related items to prevent N+1 queries.
         """
-        return Product.objects.all().prefetch_related(
+        queryset = Product.objects.all().prefetch_related(
             'items__images'
-        ).distinct()
+        )
+        # Annotate the queryset with the minimum price of its items
+        queryset = queryset.annotate(
+            price=Min('items__original_price')
+        )
+        return queryset.distinct()
 
 class ProductDetailView(generics.RetrieveAPIView):
     """

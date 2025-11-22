@@ -59,23 +59,17 @@ class ProductListSerializer(serializers.ModelSerializer):
     """
     brand = serializers.StringRelatedField()
     category = serializers.StringRelatedField()
-    price = serializers.SerializerMethodField()
+    # The 'price' field now comes directly from the annotated queryset in the view.
+    price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     image = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
         fields = ['id', 'name', 'brand', 'category', 'price', 'image']
 
-    def get_price(self, obj):
-        """Returns the lowest price of all available product items."""
-        prices = [item.price for item in obj.items.all() if item.price is not None]
-        if prices:
-            return min(prices)
-        return None
-
     def get_image(self, obj):
         """Returns the URL of the first default image found for any item."""
-        # Using prefetch_related('items__images') in the view is recommended
+        # The view should have prefetched 'items__images'
         for item in obj.items.all():
             default_image = next((img for img in item.images.all() if img.is_default), None)
             if default_image:
