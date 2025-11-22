@@ -108,10 +108,7 @@ This project follows the [Conventional Commits](https://www.conventionalcommits.
 
 
 ### Phase 1: User Authentication
--   `feat(users): create serializers for user registration and details`
--   `feat(users): implement API view for user registration`
--   `feat(users): add registration endpoint to user app URLs`
--   `test(users): add tests for user registration endpoint`
+- `feat(users): implement complete user registration flow with serializers, views, and tests`
 
 ### Phase 2: Product Catalog API
 -   `feat(product): create serializers for all product models`

@@ -1,7 +1,14 @@
 from django.urls import path
-from . import views
+from .views import (
+    ProductListView, 
+    ProductDetailView,
+    ProductCategoryListView,
+    BrandListView
+)
 
-# urlpatterns will be populated with product-related endpoints
 urlpatterns = [
-    # Example: path('', views.ProductListView.as_view(), name='product-list'),
+    path('', ProductListView.as_view(), name='product-list'),
+    path('<int:id>/', ProductDetailView.as_view(), name='product-detail'),
+    path('categories/', ProductCategoryListView.as_view(), name='category-list'),
+    path('brands/', BrandListView.as_view(), name='brand-list'),
 ]
