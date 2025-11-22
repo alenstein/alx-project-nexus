@@ -1,8 +1,8 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, serializers
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .models import ShoppingCart, ShoppingCartItem
-from .serializers import ShoppingCartSerializer, CartItemWriteSerializer, CartItemReadSerializer
+from .serializers import ShoppingCartSerializer, CartItemWriteSerializer
 
 class CartViewSet(viewsets.ViewSet):
     """
@@ -28,8 +28,8 @@ class CartViewSet(viewsets.ViewSet):
         Adds a product variation to the cart.
         If the item is already in the cart, its quantity is increased.
         """
-        cart = ShoppingCart.objects.get(user=request.user)
-        serializer = CartItemWriteSerializer(data=request.data)
+        cart, created = ShoppingCart.objects.get_or_create(user=request.user)
+        serializer = CartItemWriteSerializer(data=request.data, context={'cart': cart})
         serializer.is_valid(raise_exception=True)
         
         product_variation = serializer.validated_data['product_variation']
@@ -47,14 +47,11 @@ class CartViewSet(viewsets.ViewSet):
 
         # Re-validate stock after any quantity change
         if cart_item.qty > product_variation.qty_in_stock:
-            # This check is also in the serializer, but it's good practice
-            # to have it at the business logic level as well.
-            return Response(
-                {'error': f"Not enough stock. Only {product_variation.qty_in_stock} items available."},
-                status=status.HTTP_400_BAD_REQUEST
+            # Raise a standard validation error
+            raise serializers.ValidationError(
+                f"Not enough stock. Only {product_variation.qty_in_stock} items available."
             )
         
-        # Return the state of the entire cart after the operation
         cart_serializer = ShoppingCartSerializer(cart, context={'request': request})
         return Response(cart_serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
@@ -62,7 +59,7 @@ class CartViewSet(viewsets.ViewSet):
         """
         Updates the quantity of a specific item in the cart.
         """
-        cart = ShoppingCart.objects.get(user=request.user)
+        cart, created = ShoppingCart.objects.get_or_create(user=request.user)
         try:
             cart_item = ShoppingCartItem.objects.get(id=pk, cart=cart)
         except ShoppingCartItem.DoesNotExist:
@@ -79,7 +76,7 @@ class CartViewSet(viewsets.ViewSet):
         """
         Removes an item from the cart.
         """
-        cart = ShoppingCart.objects.get(user=request.user)
+        cart, created = ShoppingCart.objects.get_or_create(user=request.user)
         try:
             cart_item = ShoppingCartItem.objects.get(id=pk, cart=cart)
         except ShoppingCartItem.DoesNotExist:
