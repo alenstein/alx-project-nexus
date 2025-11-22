@@ -7,14 +7,29 @@ from .serializers import (
     ProductCategorySerializer,
     BrandSerializer
 )
+from .filters import ProductFilter
 
 class ProductListView(generics.ListAPIView):
     """
-    API view to list all products.
-    Uses a lightweight serializer and is optimized for performance.
+    API view to list all products with filtering, sorting, and pagination.
+    
+    **Filtering:**
+    - `category`: Filter by category name (e.g., `?category=Clothing`)
+    - `brand`: Filter by brand name (e.g., `?brand=Nike`)
+    - `min_price`: Filter by minimum price (e.g., `?min_price=50`)
+    - `max_price`: Filter by maximum price (e.g., `?max_price=200`)
+    
+    **Sorting:**
+    - `ordering`: Sort by price or name (e.g., `?ordering=price` or `?ordering=-price`)
+    
+    **Searching:**
+    - `search`: Search by product name and description (e.g., `?search=shirt`)
     """
     serializer_class = ProductListSerializer
     permission_classes = [AllowAny]
+    filterset_class = ProductFilter
+    ordering_fields = ['items__original_price', 'name']
+    search_fields = ['name', 'description']
 
     def get_queryset(self):
         """
@@ -23,7 +38,7 @@ class ProductListView(generics.ListAPIView):
         """
         return Product.objects.all().prefetch_related(
             'items__images'
-        ).order_by('id')
+        ).distinct()
 
 class ProductDetailView(generics.RetrieveAPIView):
     """
@@ -32,7 +47,7 @@ class ProductDetailView(generics.RetrieveAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductDetailSerializer
     permission_classes = [AllowAny]
-    lookup_field = 'id' # Use 'id' for the lookup
+    lookup_field = 'id'
 
 class ProductCategoryListView(generics.ListAPIView):
     """
