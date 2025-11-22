@@ -1,7 +1,12 @@
-from django.urls import path
-from . import views
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import CartViewSet
 
-# urlpatterns will be populated with cart-related endpoints
+# A router is used to automatically generate the URLs for a ViewSet.
+# This will create endpoints for list, create, retrieve, update, and destroy actions.
+router = DefaultRouter()
+router.register(r'', CartViewSet, basename='cart')
+
 urlpatterns = [
-    # Example: path('', views.CartView.as_view(), name='cart-detail'),
+    path('', include(router.urls)),
 ]
