@@ -18,7 +18,7 @@ environ.Env.read_env(BASE_DIR / '.env')
 
 # Security settings
 SECRET_KEY = env('SECRET_KEY')
-DEBUG = env.bool('DEBUG', default=False) # Default to False for production
+DEBUG = env.bool('DEBUG', default=False)
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])
 
 # Application definition
@@ -28,13 +28,18 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'whitenoise.runserver_nostatic', # Should be before staticfiles
+    'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
+    
+    # Third-party apps
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
+    'corsheaders', # Added for CORS
     'django_filters',
     'drf_yasg',
+    
+    # Local apps
     'users',
     'product',
     'cart',
@@ -42,7 +47,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', # Should be after SecurityMiddleware
+    'corsheaders.middleware.CorsMiddleware', # Should be placed high up
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -52,6 +58,18 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'eCommerce.urls'
+
+# --- CORS Configuration ---
+# For development, allow all origins to make requests.
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    # For production, restrict to a specific list of frontend domains.
+    CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[])
+
+# You can also allow specific headers or methods if needed.
+# CORS_ALLOW_METHODS = [...]
+# CORS_ALLOW_HEADERS = [...]
 
 TEMPLATES = [
     {
@@ -91,7 +109,6 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
-# The absolute path to the directory where collectstatic will collect static files for deployment.
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
@@ -157,8 +174,6 @@ EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=False)
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@ecommerce.com')
 
 # Whitenoise Storage
-# This setting tells Django to use Whitenoise to serve static files.
-# The 'CompressedManifestStaticFilesStorage' also creates gzipped versions of your files.
 STORAGES = {
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
