@@ -24,7 +24,6 @@ class ServerErrorView(views.APIView):
         raise Exception("This is a deliberate test server error.")
 
 # Define a temporary URL configuration for these tests.
-# This keeps test endpoints out of our main urls.py.
 urlpatterns = [
     path('test/admin-only/', AdminOnlyView.as_view(), name='test-admin-only'),
     path('test/server-error/', ServerErrorView.as_view(), name='test-server-error'),
@@ -32,23 +31,23 @@ urlpatterns = [
 
 # --- Test Suite ---
 
-@override_settings(ROOT_URLCONF='eCommerce.eCommerce.tests')
+@override_settings(ROOT_URLCONF='eCommerce.tests')
 class ExceptionHandlerIntegrationTests(APITestCase):
     """
     Integration tests for the custom_exception_handler.
-
-    This suite verifies that various exceptions are caught and formatted
-    into a consistent JSON response structure: {"errors": ...}
     """
     def setUp(self):
         # Create a regular user (non-admin)
         self.user = SiteUser.objects.create_user(username='testuser', email='test@example.com', password='password123', is_active=True)
-        self.client.force_authenticate(user=self.user)
+        # Create an admin user for permission-related tests
+        self.admin_user = SiteUser.objects.create_superuser(username='admin', email='admin@example.com', password='password123')
 
     def test_permission_denied_403(self):
         """
         Test that a PermissionDenied (403) error is formatted correctly.
+        A regular user tries to access an admin-only endpoint.
         """
+        self.client.force_authenticate(user=self.user)
         url = reverse('test-admin-only')
         response = self.client.get(url)
 
@@ -60,8 +59,10 @@ class ExceptionHandlerIntegrationTests(APITestCase):
     def test_method_not_allowed_405(self):
         """
         Test that a MethodNotAllowed (405) error is formatted correctly.
-        We do this by trying to POST to a GET-only endpoint.
+        An admin user tries to POST to a GET-only endpoint.
         """
+        # Authenticate as an admin user to pass the permission check
+        self.client.force_authenticate(user=self.admin_user)
         url = reverse('test-admin-only')
         response = self.client.post(url, {})
 
@@ -70,12 +71,13 @@ class ExceptionHandlerIntegrationTests(APITestCase):
         self.assertIn('detail', response.data['errors'])
         self.assertEqual(response.data['errors']['detail'], 'Method "POST" not allowed.')
 
-    @patch('eCommerce.eCommerce.exception_handler.logger')
+    @patch('eCommerce.exception_handler.logger')
     def test_server_error_500(self, mock_logger):
         """
         Test that a generic unhandled exception (500) is formatted correctly
         and that the error is logged.
         """
+        self.client.force_authenticate(user=self.user)
         url = reverse('test-server-error')
         response = self.client.get(url)
 
@@ -86,6 +88,5 @@ class ExceptionHandlerIntegrationTests(APITestCase):
 
         # Verify that the error was logged
         self.assertTrue(mock_logger.error.called)
-        # Check that the log message contains the expected text
         log_call_args = mock_logger.error.call_args[0][0]
         self.assertIn("Unhandled exception caught: This is a deliberate test server error.", log_call_args)
