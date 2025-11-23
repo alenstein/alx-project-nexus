@@ -1,0 +1,75 @@
+# This file defines the services to be deployed on Render.com
+# It includes a web service for the Django application and a cron job for background tasks.
+
+services:
+  # --- Django Web Service ---
+  - type: web
+    name: ecommerce-backend
+    env: python
+    region: oregon # Choose a region close to your users
+    plan: starter # Or 'free' for testing, 'standard' for production
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn --bind 0.0.0.0:$PORT eCommerce.wsgi:application"
+    healthCheckPath: "/healthz" # We will add this endpoint later
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true # Render will generate a strong secret key for you
+      - key: WEB_CONCURRENCY
+        value: 4 # Adjust based on your plan and server resources
+      - key: DEBUG
+        value: "False" # Always False in production
+      - key: ALLOWED_HOSTS
+        value: "ecommerce-backend.onrender.com" # Replace with your actual Render service URL
+      # Render automatically injects DATABASE_URL for its PostgreSQL service
+      # You can also manually set other email/storage env vars here if not using Render's defaults
+      - key: EMAIL_BACKEND
+        value: "django.core.mail.backends.smtp.EmailBackend"
+      - key: EMAIL_HOST
+        value: "smtp.google.com" # Example for SendGrid
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_USE_TLS
+        value: "True"
+      - key: EMAIL_HOST_USER
+        value: "apikey" # Example for SendGrid
+      - key: EMAIL_HOST_PASSWORD
+        generateValue: true # Or provide your SendGrid API Key
+      - key: DEFAULT_FROM_EMAIL
+        value: "sibandallen@gmail.com"
+      - key: PYTHON_VERSION
+        value: "3.13.0" # Specify your Python version
+
+  # --- Cron Job Service for Background Tasks ---
+  - type: cron
+    name: stock-checker-cron
+    env: python
+    region: oregon # Must be the same region as your web service
+    plan: starter # Or 'free'
+    schedule: "0 0 * * *" # Runs daily at midnight UTC (e.g., "0 0 * * *" for daily, "0 * * * *" for hourly)
+    buildCommand: "pip install -r requirements.txt"
+    # This command will execute a custom Django management command
+    startCommand: "python manage.py check_stock"
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: "ecommerce-backend.onrender.com" # Same as web service
+      # Render automatically injects DATABASE_URL for its PostgreSQL service
+      - key: EMAIL_BACKEND
+        value: "django.core.mail.backends.smtp.EmailBackend"
+      - key: EMAIL_HOST
+        value: "smtp.google.com"
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_USE_TLS
+        value: "True"
+      - key: EMAIL_HOST_USER
+        value: "apikey"
+      - key: EMAIL_HOST_PASSWORD
+        generateValue: true
+      - key: DEFAULT_FROM_EMAIL
+        value: "sibandallen@gmail.com"
+      - key: PYTHON_VERSION
+        value: "3.13.0"

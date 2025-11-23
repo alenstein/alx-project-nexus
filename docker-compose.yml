@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ecommerce_web
+    command: gunicorn --bind 0.0.0.0:8000 eCommerce.wsgi:application
+    volumes:
+      - ./eCommerce:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env

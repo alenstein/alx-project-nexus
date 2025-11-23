@@ -94,11 +94,18 @@ class UserAddressViewSet(viewsets.ModelViewSet):
     """
     API viewset for managing user addresses.
     """
-    queryset = UserAddress.objects.all()
     serializer_class = UserAddressSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        """
+        This view should return a list of all the addresses
+        for the currently authenticated user.
+        """
+        # Short-circuit for schema generation
+        if getattr(self, 'swagger_fake_view', False):
+            return UserAddress.objects.none()
+            
         return UserAddress.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
