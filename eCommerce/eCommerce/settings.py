@@ -35,11 +35,12 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
-    'corsheaders', # Added for CORS
+    'corsheaders',
     'django_filters',
     'drf_yasg',
     
     # Local apps
+    'healthcheck',
     'users',
     'product',
     'cart',
@@ -47,7 +48,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'corsheaders.middleware.CorsMiddleware', # Should be placed high up
+    'corsheaders.middleware.CorsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -60,16 +61,10 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'eCommerce.urls'
 
 # --- CORS Configuration ---
-# For development, allow all origins to make requests.
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True
 else:
-    # For production, restrict to a specific list of frontend domains.
     CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[])
-
-# You can also allow specific headers or methods if needed.
-# CORS_ALLOW_METHODS = [...]
-# CORS_ALLOW_HEADERS = [...]
 
 TEMPLATES = [
     {
