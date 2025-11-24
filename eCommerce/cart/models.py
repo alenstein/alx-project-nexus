@@ -1,21 +1,26 @@
 from django.db import models
-
-# Create your models here.
-from django.db import models
 from django.conf import settings
 from product.models import ProductVariation
 
 class ShoppingCart(models.Model):
     """
-    The user's cart bucket.
-    Created automatically when a user registers (via signals) or on first add-to-cart.
+    The user's cart bucket. Can be associated with a logged-in user or an anonymous session.
     """
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='cart')
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE, 
+        related_name='cart', 
+        null=True, 
+        blank=True
+    )
+    session_key = models.CharField(max_length=40, null=True, blank=True, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Cart for {self.user.email}"
+        if self.user:
+            return f"Cart for {self.user.email}"
+        return f"Guest Cart (Session: {self.session_key or 'Unknown'})"
 
     @property
     def total_price(self):

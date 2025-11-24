@@ -3,18 +3,56 @@ from .models import SiteUser, Address, Country, UserAddress
 from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
+from cart.models import ShoppingCart, ShoppingCartItem
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
-    Custom token serializer that checks if the user is active.
+    Custom token serializer that checks if the user is active and merges carts on login.
     """
     def validate(self, attrs):
+        # Default validation
         data = super().validate(attrs)
+
+        # Check for active user
         if not self.user.is_active:
             raise AuthenticationFailed(
                 self.error_messages["no_active_account"],
                 "no_active_account",
             )
+
+        # Merge guest cart with user cart
+        request = self.context.get('request')
+        if request and request.session.session_key:
+            session_key = request.session.session_key
+            try:
+                guest_cart = ShoppingCart.objects.get(session_key=session_key, user=None)
+                user_cart, created = ShoppingCart.objects.get_or_create(user=self.user)
+
+                # If the user's cart is newly created and empty, just assign the guest cart to the user
+                if created and not user_cart.items.exists():
+                    guest_cart.user = self.user
+                    guest_cart.session_key = None
+                    guest_cart.save()
+                else:  # Both carts exist, so we need to merge them
+                    for guest_item in guest_cart.items.all():
+                        # Check if the same item exists in the user's cart
+                        user_item, item_created = ShoppingCartItem.objects.get_or_create(
+                            cart=user_cart,
+                            product_variation=guest_item.product_variation,
+                            defaults={'qty': guest_item.qty}
+                        )
+                        # If the item already existed, update the quantity
+                        if not item_created:
+                            user_item.qty += guest_item.qty
+                            user_item.save()
+                    
+                    # Delete the guest cart after merging
+                    guest_cart.delete()
+
+            except ShoppingCart.DoesNotExist:
+                # No guest cart to merge
+                pass
+
         return data
 
 class UserRegistrationSerializer(serializers.ModelSerializer):

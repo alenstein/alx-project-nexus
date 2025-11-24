@@ -19,9 +19,14 @@ from django.shortcuts import get_object_or_404
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     """
-    Custom token view that uses the custom serializer to check for active users.
+    Custom token view that uses the custom serializer to check for active users and merge carts.
     """
     serializer_class = CustomTokenObtainPairSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
 class UserRegistrationView(generics.CreateAPIView):
     """

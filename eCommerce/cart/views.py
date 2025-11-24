@@ -1,8 +1,22 @@
 from rest_framework import viewsets, status, serializers
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny
 from .models import ShoppingCart, ShoppingCartItem
 from .serializers import ShoppingCartSerializer, CartItemWriteSerializer
+
+def get_cart(request):
+    """
+    Helper function to get or create a cart for the current user (authenticated or anonymous).
+    """
+    if request.user.is_authenticated:
+        cart, _ = ShoppingCart.objects.get_or_create(user=request.user)
+    else:
+        session_key = request.session.session_key
+        if not session_key:
+            request.session.create()
+            session_key = request.session.session_key
+        cart, _ = ShoppingCart.objects.get_or_create(session_key=session_key, user=None)
+    return cart
 
 class CartViewSet(viewsets.ViewSet):
     """
@@ -12,14 +26,13 @@ class CartViewSet(viewsets.ViewSet):
     - `partial_update`: Updates the quantity of a specific cart item.
     - `destroy`: Removes a specific item from the cart.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def list(self, request):
         """
-        Retrieves the authenticated user's shopping cart.
-        If a cart does not exist, it is created automatically.
+        Retrieves the current user's shopping cart.
         """
-        cart, created = ShoppingCart.objects.get_or_create(user=request.user)
+        cart = get_cart(request)
         serializer = ShoppingCartSerializer(cart, context={'request': request})
         return Response(serializer.data)
 
@@ -28,7 +41,7 @@ class CartViewSet(viewsets.ViewSet):
         Adds a product variation to the cart.
         If the item is already in the cart, its quantity is increased.
         """
-        cart, created = ShoppingCart.objects.get_or_create(user=request.user)
+        cart = get_cart(request)
         serializer = CartItemWriteSerializer(data=request.data, context={'cart': cart})
         serializer.is_valid(raise_exception=True)
         
@@ -59,7 +72,7 @@ class CartViewSet(viewsets.ViewSet):
         """
         Updates the quantity of a specific item in the cart.
         """
-        cart, created = ShoppingCart.objects.get_or_create(user=request.user)
+        cart = get_cart(request)
         try:
             cart_item = ShoppingCartItem.objects.get(id=pk, cart=cart)
         except ShoppingCartItem.DoesNotExist:
@@ -76,7 +89,7 @@ class CartViewSet(viewsets.ViewSet):
         """
         Removes an item from the cart.
         """
-        cart, created = ShoppingCart.objects.get_or_create(user=request.user)
+        cart = get_cart(request)
         try:
             cart_item = ShoppingCartItem.objects.get(id=pk, cart=cart)
         except ShoppingCartItem.DoesNotExist:
