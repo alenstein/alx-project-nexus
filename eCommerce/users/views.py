@@ -24,7 +24,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
     def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        # Pass context to the serializer
+        serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
@@ -105,13 +106,13 @@ class UserAddressViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """
         This view should return a list of all the addresses
-        for the currently authenticated user.
+        for the currently authenticated user, ordered by the default status.
         """
         # Short-circuit for schema generation
         if getattr(self, 'swagger_fake_view', False):
             return UserAddress.objects.none()
             
-        return UserAddress.objects.filter(user=self.request.user)
+        return UserAddress.objects.filter(user=self.request.user).order_by('-is_default')
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

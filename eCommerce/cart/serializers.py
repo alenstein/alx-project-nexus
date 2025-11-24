@@ -44,7 +44,7 @@ class CartItemWriteSerializer(serializers.ModelSerializer):
         variation = data.get('product_variation')
         qty = data.get('qty')
         if variation and qty > variation.qty_in_stock:
-            raise serializers.ValidationError(f"Only {variation.qty_in_stock} items in stock.")
+            raise serializers.ValidationError(f"Not enough stock. Only {variation.qty_in_stock} items available.")
         return data
 
 class ShoppingCartSerializer(serializers.ModelSerializer):
@@ -53,5 +53,5 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ShoppingCart
-        fields = ['id', 'user', 'items', 'total_price', 'created_at', 'updated_at']
-        read_only_fields = ['user']
+        fields = ['id', 'user', 'session_key', 'items', 'total_price', 'created_at', 'updated_at']
+        read_only_fields = ['user', 'session_key']

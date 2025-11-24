@@ -58,12 +58,11 @@ class CartViewSet(viewsets.ViewSet):
             cart_item.qty += quantity
             cart_item.save()
 
-        # Re-validate stock after any quantity change
-        if cart_item.qty > product_variation.qty_in_stock:
-            # Raise a standard validation error
-            raise serializers.ValidationError(
-                f"Not enough stock. Only {product_variation.qty_in_stock} items available."
-            )
+        # The serializer now handles stock validation, so this check is redundant
+        # if cart_item.qty > product_variation.qty_in_stock:
+        #     raise serializers.ValidationError(
+        #         f"Not enough stock. Only {product_variation.qty_in_stock} items available."
+        #     )
         
         cart_serializer = ShoppingCartSerializer(cart, context={'request': request})
         return Response(cart_serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)

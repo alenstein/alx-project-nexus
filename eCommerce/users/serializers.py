@@ -26,28 +26,27 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             session_key = request.session.session_key
             try:
                 guest_cart = ShoppingCart.objects.get(session_key=session_key, user=None)
-                user_cart, created = ShoppingCart.objects.get_or_create(user=self.user)
-
-                # If the user's cart is newly created and empty, just assign the guest cart to the user
-                if created and not user_cart.items.exists():
-                    guest_cart.user = self.user
-                    guest_cart.session_key = None
-                    guest_cart.save()
-                else:  # Both carts exist, so we need to merge them
+                
+                # Check if the user already has a cart
+                try:
+                    user_cart = ShoppingCart.objects.get(user=self.user)
+                    # Merge items from guest_cart to user_cart
                     for guest_item in guest_cart.items.all():
-                        # Check if the same item exists in the user's cart
-                        user_item, item_created = ShoppingCartItem.objects.get_or_create(
+                        user_item, created = ShoppingCartItem.objects.get_or_create(
                             cart=user_cart,
                             product_variation=guest_item.product_variation,
                             defaults={'qty': guest_item.qty}
                         )
-                        # If the item already existed, update the quantity
-                        if not item_created:
+                        if not created:
                             user_item.qty += guest_item.qty
                             user_item.save()
-                    
                     # Delete the guest cart after merging
                     guest_cart.delete()
+                except ShoppingCart.DoesNotExist:
+                    # No user cart exists, so just assign the guest cart to the user
+                    guest_cart.user = self.user
+                    guest_cart.session_key = None
+                    guest_cart.save()
 
             except ShoppingCart.DoesNotExist:
                 # No guest cart to merge
@@ -111,6 +110,9 @@ class UserAddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserAddress
         fields = ('id', 'address', 'is_default')
+        # Add ordering to fix pagination warning
+        ordering = ['-is_default']
+
 
     def create(self, validated_data):
         address_data = validated_data.pop('address')
