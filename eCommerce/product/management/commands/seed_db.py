@@ -15,8 +15,8 @@ from product.models import (
 )
 
 # --- Configuration ---
-# Using picsum.photos for random placeholder images
 IMAGE_PROVIDER_URL = "https://picsum.photos/800/800"
+MIN_PRODUCT_COUNT = 10  # The script will run if there are fewer than this many products.
 
 # --- Sample Data ---
 CATEGORIES = ["T-Shirts", "Hoodies", "Jeans", "Sneakers", "Hats"]
@@ -37,13 +37,18 @@ PRODUCT_TEMPLATES = [
 ]
 
 class Command(BaseCommand):
-    help = "Seeds the database with products, categories, brands, and images."
+    help = "Seeds the database with products, but only if the database is empty."
 
     @transaction.atomic
     def handle(self, *args, **options):
+        # --- Check if the database is already seeded ---
+        if Product.objects.count() >= MIN_PRODUCT_COUNT:
+            self.stdout.write(self.style.SUCCESS(f"Database already contains {Product.objects.count()} products. Seeding is not required."))
+            return
+
         self.stdout.write(self.style.SUCCESS("--- Starting Database Seeding ---"))
 
-        # --- Clean Up Old Data ---
+        # --- Clean Up Old Data (for a clean slate) ---
         self.stdout.write("Clearing old product data...")
         Product.objects.all().delete()
         ProductCategory.objects.all().delete()
@@ -63,15 +68,14 @@ class Command(BaseCommand):
         # --- Create Products and Variations ---
         self.stdout.write("Creating products and downloading images...")
         for template in PRODUCT_TEMPLATES:
-            # --- Create the Main Product ---
+            product_brand = random.choice(brand_objs)
             product = Product.objects.create(
                 name=template["name"],
                 category=random.choice([c for c in category_objs if c.name == template["category"]]),
-                brand=random.choice(brand_objs),
-                description=f"A high-quality {template['name']} from {brand.name}.",
+                brand=product_brand,
+                description=f"A high-quality {template['name']} from {product_brand.name}.",
             )
 
-            # --- Create a Product Item (Color Variant) ---
             product_colour = random.choice(colour_objs)
             product_item = ProductItem.objects.create(
                 product=product,
@@ -80,24 +84,18 @@ class Command(BaseCommand):
                 original_price=round(random.uniform(20.0, 100.0), 2),
             )
 
-            # --- Download and Attach Image ---
             try:
-                response = requests.get(IMAGE_PROVIDER_URL, stream=True, timeout=10)
+                response = requests.get(IMAGE_PROVIDER_URL, stream=True, timeout=15)
                 if response.status_code == 200:
-                    # Create a unique filename
                     image_name = f"{product_item.sku_base}_{random.randint(1000, 9999)}.jpg"
-                    
                     product_image = ProductImage(product_item=product_item, is_default=True)
                     product_image.image_filename.save(image_name, ContentFile(response.content), save=True)
-                    
                     self.stdout.write(f"  - Image downloaded for {product.name} ({product_colour.colour_name})")
                 else:
                     self.stdout.write(self.style.WARNING(f"  - Failed to download image for {product.name}. Status: {response.status_code}"))
             except requests.exceptions.RequestException as e:
                 self.stdout.write(self.style.ERROR(f"  - Error downloading image for {product.name}: {e}"))
 
-
-            # --- Create Product Variations (Size Variants) ---
             for size in random.sample(size_objs, k=random.randint(2, len(SIZES))):
                 ProductVariation.objects.create(
                     product_item=product_item,
@@ -105,5 +103,5 @@ class Command(BaseCommand):
                     qty_in_stock=random.randint(5, 50),
                 )
         
-        self.stdout.write(self.style.SUCCESS(f"\nSuccessfully created {len(PRODUCT_TEMPLATES)} products with variations."))
+        self.stdout.write(self.style.SUCCESS(f"\nSuccessfully created {len(PRODUCT_TEMPLATES)} products."))
         self.stdout.write(self.style.SUCCESS("--- Database Seeding Complete ---"))
