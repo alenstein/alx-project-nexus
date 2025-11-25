@@ -6,10 +6,12 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: ecommerce_web
-    command: gunicorn --bind 0.0.0.0:8000 eCommerce.wsgi:application
+    # Use the host's network. This allows the container to connect to
+    # services on the host machine using 'localhost'.
+    network_mode: "host"
+    command: sh -c "chmod +x /app/entrypoint.sh && /app/entrypoint.sh gunicorn --bind 0.0.0.0:8000 eCommerce.wsgi:application"
     volumes:
       - ./eCommerce:/app
-    ports:
-      - "8000:8000"
+      - ./entrypoint.sh:/app/entrypoint.sh
     env_file:
       - eCommerce/.env

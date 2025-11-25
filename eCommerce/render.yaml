@@ -8,8 +8,11 @@ envVarGroups:
       - key: SECRET_KEY
       - key: DEBUG
       - key: ALLOWED_HOSTS
-      - key: DB_URL
+      - key: DB_URL # Use the Internal Connection String from your Render DB
       - key: EMAIL_HOST_PASSWORD
+      - key: SUPERUSER_EMAIL
+      - key: SUPERUSER_USERNAME
+      - key: SUPERUSER_PASSWORD
 
       # --- Configurations (set values in Render UI) ---
       - key: PYTHON_VERSION
@@ -28,7 +31,11 @@ services:
     env: python
     region: oregon
     plan: starter # Use 'free' for the free tier
-    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate"
+    buildCommand: >-
+      pip install -r requirements.txt &&
+      python manage.py collectstatic --noinput &&
+      python manage.py migrate &&
+      python manage.py create_superuser
     startCommand: "gunicorn --bind 0.0.0.0:$PORT eCommerce.wsgi:application"
     healthCheckPath: "/healthz"
     envVarGroup: ecommerce-env

@@ -21,6 +21,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the entire eCommerce application directory into the container
 COPY eCommerce/ .
 
+# Copy the entrypoint script
+COPY entrypoint.sh .
+
+# --- Make Entrypoint Executable ---
+RUN chmod +x /app/entrypoint.sh
+
 # --- Collect Static Files ---
 # This command gathers all static files from all apps into the STATIC_ROOT directory.
 # The --noinput flag prevents the command from asking for user input.
@@ -31,6 +37,9 @@ RUN python manage.py collectstatic --noinput
 EXPOSE 8000
 
 # --- Entrypoint ---
-# The command to run when the container starts.
-# Gunicorn is a production-grade WSGI server.
+# The entrypoint script will run migrations and create a superuser before starting the app.
+ENTRYPOINT ["/app/entrypoint.sh"]
+
+# --- Default Command ---
+# The command that the entrypoint will execute after it finishes.
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "eCommerce.wsgi:application"]
