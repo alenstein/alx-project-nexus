@@ -8,9 +8,9 @@ from .serializers import (
     CustomTokenObtainPairSerializer
 )
 from .models import SiteUser, UserAddress
+from .tasks import send_confirmation_email_task  # Import the Celery task
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -32,7 +32,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 class UserRegistrationView(generics.CreateAPIView):
     """
     API view for user registration.
-    Creates an inactive user and sends a confirmation email.
+    Creates an inactive user and sends a confirmation email via a background task.
     """
     queryset = SiteUser.objects.all()
     serializer_class = UserRegistrationSerializer
@@ -40,14 +40,21 @@ class UserRegistrationView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         user = serializer.save()
-        # Generate token and send confirmation email
+        # Generate token and confirmation link
         token = default_token_generator.make_token(user)
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         confirm_link = f"http://localhost:8000/api/v1/auth/confirm-email/{uid}/{token}/"
         
         subject = 'Activate Your E-Commerce Account'
         message = f'Hi {user.first_name},\n\nPlease click the link below to confirm your email address and activate your account:\n{confirm_link}'
-        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
+        
+        # --- Send email asynchronously ---
+        send_confirmation_email_task.delay(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email]
+        )
 
 class EmailConfirmationView(views.APIView):
     """

@@ -9,6 +9,7 @@ envVarGroups:
       - key: DEBUG
       - key: ALLOWED_HOSTS
       - key: DB_URL # Use the Internal Connection String from your Render DB
+      - key: CELERY_BROKER_URL # Use the Internal URL from your Render Redis instance
       - key: EMAIL_HOST_PASSWORD
       - key: SUPERUSER_EMAIL
       - key: SUPERUSER_USERNAME
@@ -25,6 +26,13 @@ envVarGroups:
       - key: DEFAULT_FROM_EMAIL
 
 services:
+  # --- Redis Instance ---
+  - type: redis
+    name: ecommerce-redis
+    region: oregon
+    plan: free # Or a paid plan for production
+    ipAllowList: [] # Allow all, or restrict to your service IPs
+
   # --- Django Web Service ---
   - type: web
     name: ecommerce-backend
@@ -38,6 +46,18 @@ services:
       python manage.py create_superuser
     startCommand: "gunicorn --bind 0.0.0.0:$PORT eCommerce.wsgi:application"
     healthCheckPath: "/healthz"
+    envVarGroup: ecommerce-env
+    python:
+      version: "3.13.0"
+
+  # --- Celery Worker ---
+  - type: worker
+    name: ecommerce-celery-worker
+    env: python
+    region: oregon
+    plan: starter # Or 'free'
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "celery -A eCommerce worker --loglevel=info"
     envVarGroup: ecommerce-env
     python:
       version: "3.13.0"
@@ -60,8 +80,5 @@ services:
     env: shell # Use a lightweight shell environment
     region: oregon
     plan: free # This can run on the free tier
-    # Cron syntax for "every 8 minutes"
     schedule: "*/8 * * * *"
-    # This command makes a silent HTTP request to your health check endpoint.
-    # IMPORTANT: Replace 'YOUR_APP_URL' with your actual Render service URL.
     startCommand: "curl -sS https://ecommerce-backend-v2-dz2z.onrender.com/healthz"
