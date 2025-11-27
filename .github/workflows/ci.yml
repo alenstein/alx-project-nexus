@@ -41,23 +41,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Create .env file for testing
-        run: |
-          cat << EOF > eCommerce/.env
-          SECRET_KEY=a_temporary_secret_key_for_testing
-          DEBUG=True
-          ALLOWED_HOSTS=localhost,127.0.0.1
-          DB_NAME=test_db
-          DB_USER=test_user
-          DB_PASSWORD=test_password
-          DB_HOST=localhost # The service containers are available on localhost within the job
-          DB_PORT=5432
-          CELERY_BROKER_URL=redis://localhost:6379/0
-          CELERY_RESULT_BACKEND=redis://localhost:6379/0
-          # Use console backend for emails during testing to avoid actual sending
-          EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
-          EOF
-
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -68,6 +51,20 @@ jobs:
 
       - name: Run Django tests
         run: python eCommerce/manage.py test
+        env:
+          # Inject all required settings directly as environment variables for the test run.
+          # This is the most reliable method in a CI environment.
+          SECRET_KEY: a_temporary_secret_key_for_testing
+          DEBUG: "True" # Must be a string
+          ALLOWED_HOSTS: "localhost,127.0.0.1"
+          DB_NAME: test_db
+          DB_USER: test_user
+          DB_PASSWORD: test_password
+          DB_HOST: localhost # The service containers are available on localhost within the job
+          DB_PORT: 5432
+          CELERY_BROKER_URL: redis://localhost:6379/0
+          CELERY_RESULT_BACKEND: redis://localhost:6379/0
+          EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
 
       - name: Login to Docker Hub
         if: success() # Only run if tests pass
