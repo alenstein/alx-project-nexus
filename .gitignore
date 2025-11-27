@@ -72,3 +72,4 @@ venv.bak/
 
 # pycharm env
 .idea/
+*.pem

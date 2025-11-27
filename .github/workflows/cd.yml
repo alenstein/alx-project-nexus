@@ -1,0 +1,57 @@
+name: Continuous Deployment - Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main # Runs when code is pushed to the main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          script: |
+            # Navigate to the project directory on the EC2 instance
+            PROJECT_DIR="/home/ubuntu/ecommerce-backend"
+            cd $PROJECT_DIR
+
+            # Create the .env file from GitHub Secrets
+            # This ensures the latest secrets are always used
+            cat << EOF > eCommerce/.env
+            SECRET_KEY=${{ secrets.SECRET_KEY }}
+            DEBUG=False
+            ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}
+            DB_NAME=${{ secrets.DB_NAME }}
+            DB_USER=${{ secrets.DB_USER }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            DB_HOST=db
+            DB_PORT=5432
+            CELERY_BROKER_URL=redis://redis:6379/0
+            CELERY_RESULT_BACKEND=redis://redis:6379/0
+            EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+            EMAIL_HOST=${{ secrets.EMAIL_HOST }}
+            EMAIL_PORT=${{ secrets.EMAIL_PORT }}
+            EMAIL_USE_TLS=True
+            EMAIL_HOST_USER=${{ secrets.EMAIL_HOST_USER }}
+            EMAIL_HOST_PASSWORD=${{ secrets.EMAIL_HOST_PASSWORD }}
+            DEFAULT_FROM_EMAIL=${{ secrets.DEFAULT_FROM_EMAIL }}
+            SUPERUSER_EMAIL=${{ secrets.SUPERUSER_EMAIL }}
+            SUPERUSER_USERNAME=${{ secrets.SUPERUSER_USERNAME }}
+            SUPERUSER_PASSWORD=${{ secrets.SUPERUSER_PASSWORD }}
+            EOF
+
+            # Pull the latest version of the Docker image
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
+
+            # Restart the services with the new image
+            # Docker Compose will automatically re-create only the containers whose images have changed
+            docker-compose up -d
+
+            # Clean up old, unused Docker images to save disk space
+            docker image prune -f

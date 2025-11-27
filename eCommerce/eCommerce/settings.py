@@ -13,8 +13,9 @@ env = environ.Env(
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Take environment variables from .env file
-environ.Env.read_env(BASE_DIR / '.env')
+# Load .env file only in development
+if env.bool('DEBUG', default=False):
+    environ.Env.read_env(BASE_DIR / '.env')
 
 # Security settings
 SECRET_KEY = env('SECRET_KEY')
@@ -83,10 +84,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'eCommerce.wsgi.application'
 
-# Database
-DATABASES = {
-    'default': env.db('DB_URL', default=f'sqlite:///{BASE_DIR / "db.sqlite3"}')
-}
+# --- Database ---
+# Build the DB URL from individual environment variables for security and flexibility.
+DB_URL = env.str('DB_URL', default=f"postgres://{env('DB_USER')}:{env('DB_PASSWORD')}@{env('DB_HOST')}:{env('DB_PORT')}/{env('DB_NAME')}")
+DATABASES = {'default': env.db_url_config(DB_URL)}
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -116,8 +117,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.siteUser'
 
 # Celery Configuration
-CELERY_BROKER_URL = env('CELERY_BROKER_URL', default='redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = env('CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')
+CELERY_BROKER_URL = env('CELERY_BROKER_URL')
+CELERY_RESULT_BACKEND = env('CELERY_RESULT_BACKEND')
 
 # DRF and JWT Settings
 REST_FRAMEWORK = {

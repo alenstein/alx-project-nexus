@@ -15,10 +15,6 @@ python manage.py create_superuser
 echo "Checking if database seeding is required..."
 python manage.py seed_db
 
-# --- Start Celery worker in the background ---
-echo "Starting Celery worker in the background..."
-celery -A eCommerce worker --loglevel=info &
-
-# --- Start the main application (Gunicorn) in the foreground ---
+# Start the main application (Gunicorn)
 echo "Starting Gunicorn server..."
 exec "$@"

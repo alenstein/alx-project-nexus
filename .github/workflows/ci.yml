@@ -1,0 +1,79 @@
+name: Continuous Integration - Test and Build
+
+on:
+  push:
+    branches:
+      - dev # Runs when code is pushed to the dev branch
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+
+    services:
+      # Start up a temporary Postgres database for testing
+      postgres:
+        image: postgres:14-alpine
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      # Start up a temporary Redis instance for testing
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Django tests
+        run: |
+          python eCommerce/manage.py test
+        env:
+          # Use the temporary service containers for testing
+          SECRET_KEY: a_temporary_secret_key_for_testing
+          DEBUG: True
+          DB_NAME: test_db
+          DB_USER: test_user
+          DB_PASSWORD: test_password
+          DB_HOST: localhost # The service containers are available on localhost within the job
+          DB_PORT: 5432
+          CELERY_BROKER_URL: redis://localhost:6379/0
+          CELERY_RESULT_BACKEND: redis://localhost:6379/0
+
+      - name: Login to Docker Hub
+        if: success() # Only run if tests pass
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        if: success() # Only run if tests pass
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
