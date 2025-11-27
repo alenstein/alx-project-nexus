@@ -41,7 +41,9 @@ jobs:
       - name: Run 'users' app tests
         run: python eCommerce/manage.py test users
         env:
-          # Use Celery's 'eager' mode for testing to run tasks synchronously
+          # Provide dummy broker URLs; they are required by settings but unused in eager mode.
+          CELERY_BROKER_URL: "memory://"
+          CELERY_RESULT_BACKEND: "rpc://"
           CELERY_TASK_ALWAYS_EAGER: "True"
           SECRET_KEY: "a-temporary-secret-key-for-ci"
           DEBUG: "True"
@@ -56,6 +58,8 @@ jobs:
       - name: Run 'product' app tests
         run: python eCommerce/manage.py test product
         env:
+          CELERY_BROKER_URL: "memory://"
+          CELERY_RESULT_BACKEND: "rpc://"
           CELERY_TASK_ALWAYS_EAGER: "True"
           SECRET_KEY: "a-temporary-secret-key-for-ci"
           DEBUG: "True"
@@ -70,6 +74,8 @@ jobs:
       - name: Run 'cart' app tests
         run: python eCommerce/manage.py test cart
         env:
+          CELERY_BROKER_URL: "memory://"
+          CELERY_RESULT_BACKEND: "rpc://"
           CELERY_TASK_ALWAYS_EAGER: "True"
           SECRET_KEY: "a-temporary-secret-key-for-ci"
           DEBUG: "True"
