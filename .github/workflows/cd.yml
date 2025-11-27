@@ -27,7 +27,6 @@ jobs:
             cd $PROJECT_DIR
 
             # --- Create docker-compose.yml on the server ---
-            # This file defines HOW to run the services.
             cat << EOF > docker-compose.yml
             version: '3.8'
 
@@ -77,7 +76,6 @@ jobs:
             EOF
 
             # --- Create the .env file from GitHub Secrets ---
-            # This file provides the configuration VALUES.
             mkdir -p eCommerce
             cat << EOF > eCommerce/.env
             SECRET_KEY=${{ secrets.SECRET_KEY }}
@@ -102,15 +100,18 @@ jobs:
             SUPERUSER_PASSWORD=${{ secrets.SUPERUSER_PASSWORD }}
             EOF
 
-            # Pull the latest version of the Docker image from Docker Hub
+            # --- Load Environment Variables and Deploy ---
+            # Export the variables from the .env file so docker-compose can use them
+            export $(cat eCommerce/.env | xargs)
+
+            # Pull the latest version of the Docker image
             echo "Pulling latest Docker image..."
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
 
-            # Stop and remove old containers, then start new ones
-            # Using 'up -d' will re-create only the services whose image has changed
+            # Start services. Docker Compose will use the exported variables
             echo "Starting services with Docker Compose..."
             docker-compose up -d
 
-            # Clean up old, unused Docker images to save disk space
+            # Clean up old, unused Docker images
             echo "Cleaning up old Docker images..."
             docker image prune -f
