@@ -9,8 +9,6 @@ on:
 
 jobs:
   deploy:
-    # This 'if' condition is the key: it ensures the job only runs
-    # if the pull request was actually merged.
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
@@ -36,6 +34,7 @@ jobs:
                 container_name: ecommerce_db
                 volumes:
                   - postgres_data:/var/lib/postgresql/data/
+                # These variables are now automatically substituted by docker-compose from the root .env file
                 environment:
                   POSTGRES_USER: \${DB_USER}
                   POSTGRES_PASSWORD: \${DB_PASSWORD}
@@ -53,8 +52,7 @@ jobs:
                 command: /app/entrypoint.sh gunicorn --bind 0.0.0.0:8000 eCommerce.wsgi:application
                 ports:
                   - "8000:8000"
-                env_file:
-                  - ./eCommerce/.env
+                env_file: .env # Points to the root .env file
                 depends_on:
                   - db
                   - redis
@@ -64,8 +62,7 @@ jobs:
                 image: ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
                 container_name: ecommerce_celery_worker
                 command: celery -A eCommerce worker --loglevel=info
-                env_file:
-                  - ./eCommerce/.env
+                env_file: .env # Points to the root .env file
                 depends_on:
                   - redis
                   - web
@@ -75,9 +72,9 @@ jobs:
               postgres_data:
             EOF
 
-            # --- Create the .env file from GitHub Secrets ---
-            mkdir -p eCommerce
-            cat << EOF > eCommerce/.env
+            # --- Create the root .env file from GitHub Secrets ---
+            # This file is now in the project root, so docker-compose automatically loads it.
+            cat << EOF > .env
             SECRET_KEY=${{ secrets.SECRET_KEY }}
             DEBUG=False
             ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}
@@ -100,15 +97,11 @@ jobs:
             SUPERUSER_PASSWORD=${{ secrets.SUPERUSER_PASSWORD }}
             EOF
 
-            # --- Load Environment Variables and Deploy ---
-            # Export the variables from the .env file so docker-compose can use them
-            export $(cat eCommerce/.env | xargs)
-
             # Pull the latest version of the Docker image
             echo "Pulling latest Docker image..."
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
 
-            # Start services. Docker Compose will use the exported variables
+            # Start services. Docker Compose will automatically find and use the .env file.
             echo "Starting services with Docker Compose..."
             docker-compose up -d
 
