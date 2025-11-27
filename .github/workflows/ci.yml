@@ -3,7 +3,7 @@ name: Continuous Integration - Test and Build
 on:
   pull_request:
     branches:
-      - main
+      - main # Runs when a PR is opened or updated that targets 'main'
     types: [opened, synchronize, reopened]
 
 jobs:
@@ -41,6 +41,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Create .env file for testing
+        run: |
+          cat << EOF > eCommerce/.env
+          SECRET_KEY=a_temporary_secret_key_for_testing
+          DEBUG=True
+          ALLOWED_HOSTS=localhost,127.0.0.1
+          DB_NAME=test_db
+          DB_USER=test_user
+          DB_PASSWORD=test_password
+          DB_HOST=localhost # The service containers are available on localhost within the job
+          DB_PORT=5432
+          CELERY_BROKER_URL=redis://localhost:6379/0
+          CELERY_RESULT_BACKEND=redis://localhost:6379/0
+          # Use console backend for emails during testing to avoid actual sending
+          EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+          EOF
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -50,20 +67,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run Django tests
-        id: tests # Give this step an ID so we can reference it
-        run: |
-          python eCommerce/manage.py test
-        env:
-          # Use the temporary service containers for testing
-          SECRET_KEY: a_temporary_secret_key_for_testing
-          DEBUG: True
-          DB_NAME: test_db
-          DB_USER: test_user
-          DB_PASSWORD: test_password
-          DB_HOST: localhost # The service containers are available on localhost within the job
-          DB_PORT: 5432
-          CELERY_BROKER_URL: redis://localhost:6379/0
-          CELERY_RESULT_BACKEND: redis://localhost:6379/0
+        run: python eCommerce/manage.py test
 
       - name: Login to Docker Hub
         if: success() # Only run if tests pass

@@ -29,8 +29,9 @@ RUN chmod +x /app/entrypoint.sh
 
 # --- Collect Static Files ---
 # This command gathers all static files from all apps into the STATIC_ROOT directory.
-# The --noinput flag prevents the command from asking for user input.
-RUN python manage.py collectstatic --noinput
+# We provide a dummy SECRET_KEY just for the build process, as it's required by Django to load the settings.
+# This key is not used for the final running container.
+RUN SECRET_KEY=a-temporary-secret-key-for-building python manage.py collectstatic --noinput
 
 # --- Expose Port ---
 # Expose the port the app runs on
