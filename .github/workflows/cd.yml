@@ -1,12 +1,17 @@
 name: Continuous Deployment - Deploy to EC2
 
 on:
-  push:
+  pull_request:
+    types:
+      - closed # This specifies the workflow runs when a PR is closed
     branches:
-      - main # Runs when code is pushed to the main branch
+      - main # It only runs for PRs that target the main branch
 
 jobs:
   deploy:
+    # This 'if' condition is the key: it ensures the job only runs
+    # if the pull request was actually merged.
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     steps:

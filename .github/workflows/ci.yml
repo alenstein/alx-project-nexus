@@ -1,9 +1,10 @@
 name: Continuous Integration - Test and Build
 
 on:
-  push:
+  pull_request:
     branches:
-      - dev # Runs when code is pushed to the dev branch
+      - main # Runs when a PR is opened or updated that targets 'main'
+    types: [opened, synchronize, reopened]
 
 jobs:
   test-and-build:
@@ -49,6 +50,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run Django tests
+        id: tests # Give this step an ID so we can reference it
         run: |
           python eCommerce/manage.py test
         env:
