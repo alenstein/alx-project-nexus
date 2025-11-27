@@ -12,7 +12,6 @@ jobs:
 
     services:
       # Use hardcoded credentials for the temporary test database.
-      # Secrets are not needed or recommended for CI services.
       postgres:
         image: postgres:14-alpine
         env:
@@ -23,16 +22,6 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -52,7 +41,8 @@ jobs:
       - name: Run 'users' app tests
         run: python eCommerce/manage.py test users
         env:
-          # Use the same hardcoded credentials to connect to the test database.
+          # Use Celery's 'eager' mode for testing to run tasks synchronously
+          CELERY_TASK_ALWAYS_EAGER: "True"
           SECRET_KEY: "a-temporary-secret-key-for-ci"
           DEBUG: "True"
           ALLOWED_HOSTS: "localhost,127.0.0.1"
@@ -61,13 +51,12 @@ jobs:
           DB_PASSWORD: test_password
           DB_HOST: localhost
           DB_PORT: 5432
-          CELERY_BROKER_URL: redis://localhost:6379/0
-          CELERY_RESULT_BACKEND: redis://localhost:6379/0
           EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
 
       - name: Run 'product' app tests
         run: python eCommerce/manage.py test product
         env:
+          CELERY_TASK_ALWAYS_EAGER: "True"
           SECRET_KEY: "a-temporary-secret-key-for-ci"
           DEBUG: "True"
           ALLOWED_HOSTS: "localhost,127.0.0.1"
@@ -76,13 +65,12 @@ jobs:
           DB_PASSWORD: test_password
           DB_HOST: localhost
           DB_PORT: 5432
-          CELERY_BROKER_URL: redis://localhost:6379/0
-          CELERY_RESULT_BACKEND: redis://localhost:6379/0
           EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
 
       - name: Run 'cart' app tests
         run: python eCommerce/manage.py test cart
         env:
+          CELERY_TASK_ALWAYS_EAGER: "True"
           SECRET_KEY: "a-temporary-secret-key-for-ci"
           DEBUG: "True"
           ALLOWED_HOSTS: "localhost,127.0.0.1"
@@ -91,8 +79,6 @@ jobs:
           DB_PASSWORD: test_password
           DB_HOST: localhost
           DB_PORT: 5432
-          CELERY_BROKER_URL: redis://localhost:6379/0
-          CELERY_RESULT_BACKEND: redis://localhost:6379/0
           EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
 
       - name: Login to Docker Hub
