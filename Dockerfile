@@ -8,6 +8,10 @@ ENV PYTHONDONTWRITEBYTECODE=1
 # Ensure Python output is sent straight to the terminal without buffering
 ENV PYTHONUNBUFFERED=1
 
+# --- Build-time Arguments ---
+# Declare an argument that can be passed in during the build process.
+ARG SECRET_KEY
+
 # --- Application Setup ---
 # Set the working directory inside the container
 WORKDIR /app
@@ -28,10 +32,9 @@ COPY entrypoint.sh .
 RUN chmod +x /app/entrypoint.sh
 
 # --- Collect Static Files ---
-# This command gathers all static files from all apps into the STATIC_ROOT directory.
-# We provide a dummy SECRET_KEY just for the build process, as it's required by Django to load the settings.
-# This key is not used for the final running container.
-RUN SECRET_KEY=a-temporary-secret-key-for-building python manage.py collectstatic --noinput
+# This command uses the SECRET_KEY provided as a build argument.
+# This key is not saved in the final image layers.
+RUN SECRET_KEY=${SECRET_KEY} python manage.py collectstatic --noinput
 
 # --- Expose Port ---
 # Expose the port the app runs on

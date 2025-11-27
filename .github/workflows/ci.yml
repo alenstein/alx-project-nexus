@@ -15,9 +15,9 @@ jobs:
       postgres:
         image: postgres:14-alpine
         env:
-          POSTGRES_DB: test_db
-          POSTGRES_USER: test_user
-          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: ${{ secrets.DB_NAME }}
+          POSTGRES_USER: ${{ secrets.DB_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
         ports:
           - 5432:5432
         options: >-
@@ -49,34 +49,64 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run Django tests
-        run: python eCommerce/manage.py test
+      - name: Run 'users' app tests
+        run: python eCommerce/manage.py test users
         env:
-          # Inject all required settings directly as environment variables for the test run.
-          # This is the most reliable method in a CI environment.
-          SECRET_KEY: a_temporary_secret_key_for_testing
-          DEBUG: "True" # Must be a string
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DEBUG: "True"
           ALLOWED_HOSTS: "localhost,127.0.0.1"
-          DB_NAME: test_db
-          DB_USER: test_user
-          DB_PASSWORD: test_password
-          DB_HOST: localhost # The service containers are available on localhost within the job
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_HOST: localhost
+          DB_PORT: 5432
+          CELERY_BROKER_URL: redis://localhost:6379/0
+          CELERY_RESULT_BACKEND: redis://localhost:6379/0
+          EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
+
+      - name: Run 'product' app tests
+        run: python eCommerce/manage.py test product
+        env:
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DEBUG: "True"
+          ALLOWED_HOSTS: "localhost,127.0.0.1"
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_HOST: localhost
+          DB_PORT: 5432
+          CELERY_BROKER_URL: redis://localhost:6379/0
+          CELERY_RESULT_BACKEND: redis://localhost:6379/0
+          EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
+
+      - name: Run 'cart' app tests
+        run: python eCommerce/manage.py test cart
+        env:
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DEBUG: "True"
+          ALLOWED_HOSTS: "localhost,127.0.0.1"
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_HOST: localhost
           DB_PORT: 5432
           CELERY_BROKER_URL: redis://localhost:6379/0
           CELERY_RESULT_BACKEND: redis://localhost:6379/0
           EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
 
       - name: Login to Docker Hub
-        if: success() # Only run if tests pass
+        if: success()
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push Docker image
-        if: success() # Only run if tests pass
+        if: success()
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
+          build-args: |
+            SECRET_KEY=${{ secrets.SECRET_KEY }}
