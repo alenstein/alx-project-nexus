@@ -3,7 +3,7 @@ name: Continuous Integration - Test and Build
 on:
   pull_request:
     branches:
-      - main # Runs when a PR is opened or updated that targets 'main'
+      - main
     types: [opened, synchronize, reopened]
 
 jobs:
