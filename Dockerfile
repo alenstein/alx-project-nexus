@@ -41,7 +41,7 @@ WORKDIR /app
 # Copy installed Python packages from the builder stage
 COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 
-# --- THE FIX ---
+
 # Copy the executables (like gunicorn and celery) from the builder stage
 COPY --from=builder /usr/local/bin /usr/local/bin
 

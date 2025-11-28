@@ -1,4 +1,4 @@
-name: Continuous Deployment - Deploy to EC2
+name: 🚀 CD - Deploy to Production
 
 on:
   pull_request:
@@ -9,24 +9,24 @@ on:
 
 jobs:
   # --- Job 1: Prepare the Server ---
-  # This job connects to the EC2 instance and writes the necessary config files.
   prepare-server:
+    name: ⚙️ Prepare EC2 Server
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - name: Create Config Files on EC2
+      - name: 📝 Create Config Files on EC2
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           script: |
-            # Navigate to the project directory
+            echo "--- Navigating to project directory ---"
             PROJECT_DIR="/home/ubuntu/ecommerce-backend"
             mkdir -p $PROJECT_DIR
             cd $PROJECT_DIR
 
-            # Cr`eate the docker-compose.yml file
+            echo "--- Creating docker-compose.yml ---"
             cat << EOF > docker-compose.yml
             version: '3.8'
             services:
@@ -68,7 +68,7 @@ jobs:
               postgres_data:
             EOF
 
-            # Create the .env file from GitHub Secrets
+            echo "--- Creating .env file from secrets ---"
             cat << EOF > .env
             SECRET_KEY=${{ secrets.SECRET_KEY }}
             DEBUG=False
@@ -92,31 +92,32 @@ jobs:
             SUPERUSER_PASSWORD=${{ secrets.SUPERUSER_PASSWORD }}
             EOF
 
+            echo "--- Server preparation complete ---"
+
   # --- Job 2: Deploy the Services ---
-  # This job runs only after the server has been successfully prepared.
   deploy-services:
-    needs: prepare-server # This creates the explicit dependency
+    name: 🚀 Deploy Services on EC2
+    needs: prepare-server
     runs-on: ubuntu-latest
     steps:
-      - name: Pull Image and Restart Services
+      - name: 🚚 Pull Image and Restart Services
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           script: |
-            # Navigate to the project directory
+            echo "--- Navigating to project directory ---"
             PROJECT_DIR="/home/ubuntu/ecommerce-backend"
             cd $PROJECT_DIR
 
-            # Pull the latest Docker image
-            echo "Pulling latest Docker image..."
+            echo "--- Pulling latest Docker image from Docker Hub ---"
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
 
-            # Start services using the config files created in the previous job
-            echo "Starting services with Docker Compose..."
+            echo "--- Starting services with Docker Compose ---"
             docker-compose --env-file .env up -d
 
-            # Clean up old, unused Docker images
-            echo "Cleaning up old Docker images..."
+            echo "--- Cleaning up old Docker images ---"
             docker image prune -f
+
+            echo "--- Deployment complete! ---"

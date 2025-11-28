@@ -1,31 +1,15 @@
-name: Continuous Integration - Test and Build
+name: ✅ CI - Test and Build
 
 on:
-  push:
+  pull_request:
     branches:
-      - dev
+      - main
+    types: [opened, synchronize, reopened]
 
 jobs:
-  # --- Job 1: Setup Environment ---
-  # This job prepares the runner by checking out code and installing dependencies.
-  setup:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.13'
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-  # --- Job 2: Run Tests ---
-  # This job runs only after the 'setup' job has completed successfully.
+  # --- Job 1: Run all tests ---
   test:
-    needs: setup
+    name: 🧪 Run Django Tests
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -40,19 +24,19 @@ jobs:
           --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
 
     steps:
-      - name: Checkout code
+      - name: 📂 Checkout Code
         uses: actions/checkout@v3
 
-      - name: Set up Python
+      - name: 🐍 Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.13'
 
-      - name: Install dependencies
+      - name: ⚙️ Install Dependencies
         run: pip install -r requirements.txt
 
-      - name: Run Django Test Suite
-        run: python eCommerce/manage.py test
+      - name: 🧪 Test 'users' App
+        run: python eCommerce/manage.py test users
         env:
           SECRET_KEY: ${{ secrets.CI_SECRET_KEY }}
           DB_NAME: ${{ secrets.CI_DB_NAME }}
@@ -67,28 +51,54 @@ jobs:
           CELERY_BROKER_URL: "memory://"
           CELERY_RESULT_BACKEND: "rpc://"
 
-  # --- Job 3: Login to Docker Hub ---
-  # This job runs only after the 'test' job has completed successfully.
-  docker-login:
-    needs: [setup, test]
+      - name: 🧪 Test 'product' App
+        run: python eCommerce/manage.py test product
+        env:
+          SECRET_KEY: ${{ secrets.CI_SECRET_KEY }}
+          DB_NAME: ${{ secrets.CI_DB_NAME }}
+          DB_USER: ${{ secrets.CI_DB_USER }}
+          DB_PASSWORD: ${{ secrets.CI_DB_PASSWORD }}
+          DEBUG: "True"
+          ALLOWED_HOSTS: "localhost,127.0.0.1"
+          DB_HOST: localhost
+          DB_PORT: 5432
+          EMAIL_BACKEND: "django.core.mail.backends.locmem.EmailBackend"
+          CELERY_TASK_ALWAYS_EAGER: "True"
+          CELERY_BROKER_URL: "memory://"
+          CELERY_RESULT_BACKEND: "rpc://"
+
+      - name: 🧪 Test 'cart' App
+        run: python eCommerce/manage.py test cart
+        env:
+          SECRET_KEY: ${{ secrets.CI_SECRET_KEY }}
+          DB_NAME: ${{ secrets.CI_DB_NAME }}
+          DB_USER: ${{ secrets.CI_DB_USER }}
+          DB_PASSWORD: ${{ secrets.CI_DB_PASSWORD }}
+          DEBUG: "True"
+          ALLOWED_HOSTS: "localhost,127.0.0.1"
+          DB_HOST: localhost
+          DB_PORT: 5432
+          EMAIL_BACKEND: "django.core.mail.backends.locmem.EmailBackend"
+          CELERY_TASK_ALWAYS_EAGER: "True"
+          CELERY_BROKER_URL: "memory://"
+          CELERY_RESULT_BACKEND: "rpc://"
+
+  # --- Job 2: Build and Push the Docker Image ---
+  build-and-push:
+    name: 📦 Build & Push Docker Image
+    needs: test
     runs-on: ubuntu-latest
     steps:
-      - name: Login to Docker Hub
+      - name: 📂 Checkout Code
+        uses: actions/checkout@v3
+
+      - name: 🔑 Login to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-  # --- Job 4: Build and Push Docker Image ---
-  # This job runs only after the 'docker-login' job has completed successfully.
-  build-and-push:
-    needs: [setup, test, docker-login]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Build and push Docker image
+      - name: 🚀 Build and Push Image
         uses: docker/build-push-action@v4
         with:
           context: .
