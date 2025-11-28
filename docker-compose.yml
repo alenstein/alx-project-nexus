@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:14-alpine
     container_name: ecommerce_db
     volumes:
       - postgres_data:/var/lib/postgresql/data/
@@ -22,7 +22,6 @@ services:
     container_name: ecommerce_redis
     restart: unless-stopped
 
-  # This service runs all setup commands in a single, chained shell command.
   django-setup:
     build:
       context: .
@@ -40,13 +39,13 @@ services:
       db:
         condition: service_healthy
 
-  # The web service now has a simple command and waits for the setup to complete.
   web:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: ecommerce_web
-    command: gunicorn eCommerce.wsgi:application --bind 0.0.0.0:8000
+    # Use the absolute path to the executable to avoid PATH issues.
+    command: /usr/local/bin/gunicorn eCommerce.wsgi:application --bind 0.0.0.0:8000
     ports:
       - "8000:8000"
     env_file:
@@ -56,13 +55,13 @@ services:
         condition: service_completed_successfully
     restart: unless-stopped
 
-  # The celery worker also has a simple command and waits for the setup to complete.
   celery-worker:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: ecommerce_celery_worker
-    command: celery -A eCommerce worker --loglevel=info
+    # Use the absolute path to the executable to avoid PATH issues.
+    command: /usr/local/bin/celery -A eCommerce worker --loglevel=info
     env_file:
       - .env
     depends_on:
