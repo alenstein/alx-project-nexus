@@ -51,7 +51,13 @@ jobs:
                 restart: unless-stopped
               django-setup:
                 image: ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
-                command: ["/app/entrypoint.sh"]
+                command: >
+                  sh -c "
+                    python manage.py migrate &&
+                    python manage.py create_superuser &&
+                    python manage.py seed_db &&
+                    echo 'Setup tasks complete.'
+                  "
                 env_file: .env
                 depends_on:
                   db:
@@ -59,7 +65,7 @@ jobs:
               web:
                 image: ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
                 container_name: ecommerce_web
-                command: gunicorn eCommerce.wsgi:application --bind 0.0.0.0:8000
+                command: /usr/local/bin/gunicorn eCommerce.wsgi:application --bind 0.0.0.0:8000
                 ports:
                   - "8000:8000"
                 env_file: .env
@@ -70,7 +76,7 @@ jobs:
               celery-worker:
                 image: ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
                 container_name: ecommerce_celery_worker
-                command: celery -A eCommerce worker --loglevel=info
+                command: /usr/local/bin/celery -A eCommerce worker --loglevel=info
                 env_file: .env
                 depends_on:
                   django-setup:
@@ -126,9 +132,8 @@ jobs:
             PROJECT_DIR="/home/ubuntu/ecommerce-backend"
             cd $PROJECT_DIR
 
-            echo "--- Shutting down and removing old containers ---"
-            docker-compose down 
-            
+            echo "--- Shutting down old services (if any) ---"
+            docker-compose down
             docker-compose down -v
 
             echo "--- Cleaning up old Docker images ---"
