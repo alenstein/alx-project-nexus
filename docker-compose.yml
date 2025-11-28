@@ -10,6 +10,11 @@ services:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
   redis:
@@ -17,34 +22,52 @@ services:
     container_name: ecommerce_redis
     restart: unless-stopped
 
+  # This service runs all setup commands in a single, chained shell command.
+  django-setup:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: >
+      sh -c "
+        python manage.py migrate &&
+        python manage.py create_superuser &&
+        python manage.py seed_db &&
+        echo 'Setup tasks complete.'
+      "
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # The web service now has a simple command and waits for the setup to complete.
   web:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: ecommerce_web
-    command: /app/entrypoint.sh gunicorn --bind 0.0.0.0:8000 eCommerce.wsgi:application
-    volumes:
-      - .:/app
+    command: gunicorn eCommerce.wsgi:application --bind 0.0.0.0:8000
     ports:
       - "8000:8000"
     env_file:
-      - .env # Use the root .env file
+      - .env
     depends_on:
-      - db
-      - redis
+      django-setup:
+        condition: service_completed_successfully
     restart: unless-stopped
 
+  # The celery worker also has a simple command and waits for the setup to complete.
   celery-worker:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: ecommerce_celery_worker
     command: celery -A eCommerce worker --loglevel=info
-    volumes:
-      - .:/app
     env_file:
-      - .env # Use the root .env file
+      - .env
     depends_on:
-      - redis
-      - web
+      django-setup:
+        condition: service_completed_successfully
     restart: unless-stopped
 
 volumes:

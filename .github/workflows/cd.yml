@@ -3,77 +3,72 @@ name: Continuous Deployment - Deploy to EC2
 on:
   pull_request:
     types:
-      - closed # This specifies the workflow runs when a PR is closed
+      - closed
     branches:
-      - main # It only runs for PRs that target the main branch
+      - main
 
 jobs:
-  deploy:
+  # --- Job 1: Prepare the Server ---
+  # This job connects to the EC2 instance and writes the necessary config files.
+  prepare-server:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-
     steps:
-      - name: Deploy to EC2
+      - name: Create Config Files on EC2
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           script: |
-            # Navigate to the project directory on the EC2 instance
+            # Navigate to the project directory
             PROJECT_DIR="/home/ubuntu/ecommerce-backend"
+            mkdir -p $PROJECT_DIR
             cd $PROJECT_DIR
 
-            # --- Create docker-compose.yml on the server ---
+            # Cr`eate the docker-compose.yml file
             cat << EOF > docker-compose.yml
             version: '3.8'
-
             services:
               db:
                 image: postgres:14-alpine
                 container_name: ecommerce_db
                 volumes:
                   - postgres_data:/var/lib/postgresql/data/
-                # These variables are now automatically substituted by docker-compose from the root .env file
                 environment:
                   POSTGRES_USER: \${DB_USER}
                   POSTGRES_PASSWORD: \${DB_PASSWORD}
                   POSTGRES_DB: \${DB_NAME}
                 restart: unless-stopped
-
               redis:
                 image: redis:7-alpine
                 container_name: ecommerce_redis
                 restart: unless-stopped
-
               web:
                 image: ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
                 container_name: ecommerce_web
                 command: /app/entrypoint.sh gunicorn --bind 0.0.0.0:8000 eCommerce.wsgi:application
                 ports:
                   - "8000:8000"
-                env_file: .env # Points to the root .env file
+                env_file: .env
                 depends_on:
                   - db
                   - redis
                 restart: unless-stopped
-
               celery-worker:
                 image: ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
                 container_name: ecommerce_celery_worker
-                command: celery -A eCommerce worker --loglevel=info
-                env_file: .env # Points to the root .env file
+                command: /app/entrypoint.sh celery -A eCommerce worker --loglevel=info
+                env_file: .env
                 depends_on:
+                  - db
                   - redis
-                  - web
                 restart: unless-stopped
-
             volumes:
               postgres_data:
             EOF
 
-            # --- Create the root .env file from GitHub Secrets ---
-            # This file is now in the project root, so docker-compose automatically loads it.
+            # Create the .env file from GitHub Secrets
             cat << EOF > .env
             SECRET_KEY=${{ secrets.SECRET_KEY }}
             DEBUG=False
@@ -97,13 +92,30 @@ jobs:
             SUPERUSER_PASSWORD=${{ secrets.SUPERUSER_PASSWORD }}
             EOF
 
-            # Pull the latest version of the Docker image
+  # --- Job 2: Deploy the Services ---
+  # This job runs only after the server has been successfully prepared.
+  deploy-services:
+    needs: prepare-server # This creates the explicit dependency
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull Image and Restart Services
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          script: |
+            # Navigate to the project directory
+            PROJECT_DIR="/home/ubuntu/ecommerce-backend"
+            cd $PROJECT_DIR
+
+            # Pull the latest Docker image
             echo "Pulling latest Docker image..."
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
 
-            # Start services. Docker Compose will automatically find and use the .env file.
+            # Start services using the config files created in the previous job
             echo "Starting services with Docker Compose..."
-            docker-compose up -d
+            docker-compose --env-file .env up -d
 
             # Clean up old, unused Docker images
             echo "Cleaning up old Docker images..."
