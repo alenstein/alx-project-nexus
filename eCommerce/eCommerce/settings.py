@@ -12,10 +12,12 @@ env = environ.Env(
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+# This is the true root of the project.
+PROJECT_ROOT = BASE_DIR.parent
 
 # Load .env file only in development
 if env.bool('DEBUG', default=False):
-    environ.Env.read_env(BASE_DIR / '.env')
+    environ.Env.read_env(PROJECT_ROOT / '.env')
 
 # Security settings
 SECRET_KEY = env('SECRET_KEY')
@@ -105,10 +107,10 @@ USE_TZ = True
 
 # Static and Media files
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_ROOT = PROJECT_ROOT / 'staticfiles' # Collect static files at the project root
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = PROJECT_ROOT / 'media' # Store user-uploaded media at the project root
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
