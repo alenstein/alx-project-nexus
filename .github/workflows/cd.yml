@@ -39,30 +39,42 @@ jobs:
                   POSTGRES_USER: \${DB_USER}
                   POSTGRES_PASSWORD: \${DB_PASSWORD}
                   POSTGRES_DB: \${DB_NAME}
+                healthcheck:
+                  test: ["CMD-SHELL", "pg_isready -U \${DB_USER} -d \${DB_NAME}"]
+                  interval: 5s
+                  timeout: 5s
+                  retries: 5
                 restart: unless-stopped
               redis:
                 image: redis:7-alpine
                 container_name: ecommerce_redis
                 restart: unless-stopped
+              django-setup:
+                image: ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
+                command: ["/app/entrypoint.sh"]
+                env_file: .env
+                depends_on:
+                  db:
+                    condition: service_healthy
               web:
                 image: ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
                 container_name: ecommerce_web
-                command: /app/entrypoint.sh gunicorn --bind 0.0.0.0:8000 eCommerce.wsgi:application
+                command: gunicorn eCommerce.wsgi:application --bind 0.0.0.0:8000
                 ports:
                   - "8000:8000"
                 env_file: .env
                 depends_on:
-                  - db
-                  - redis
+                  django-setup:
+                    condition: service_completed_successfully
                 restart: unless-stopped
               celery-worker:
                 image: ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
                 container_name: ecommerce_celery_worker
-                command: /app/entrypoint.sh celery -A eCommerce worker --loglevel=info
+                command: celery -A eCommerce worker --loglevel=info
                 env_file: .env
                 depends_on:
-                  - db
-                  - redis
+                  django-setup:
+                    condition: service_completed_successfully
                 restart: unless-stopped
             volumes:
               postgres_data:
@@ -96,26 +108,49 @@ jobs:
 
   # --- Job 2: Deploy the Services ---
   deploy-services:
-    name: 🚀 Deploy Services on EC2
+    name: 🚀 Deploy and Verify Services
     needs: prepare-server
     runs-on: ubuntu-latest
     steps:
-      - name: 🚚 Pull Image and Restart Services
+      - name: 🚚 Deploy, Monitor, and Verify
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           script: |
+            # Exit immediately if any command fails
+            set -e
+
             echo "--- Navigating to project directory ---"
             PROJECT_DIR="/home/ubuntu/ecommerce-backend"
             cd $PROJECT_DIR
 
+            echo "--- Shutting down old services (if any) ---"
+            docker-compose down -v
+
             echo "--- Pulling latest Docker image from Docker Hub ---"
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
 
-            echo "--- Starting services with Docker Compose ---"
+            echo "--- Starting all services with Docker Compose ---"
             docker-compose --env-file .env up -d
+
+            echo "--- Pausing for 15 seconds to allow services to stabilize ---"
+            sleep 15
+
+            echo "--- Verifying running services ---"
+            # We expect 4 main services to be running: db, redis, web, celery-worker
+            EXPECTED_SERVICES=4
+            RUNNING_SERVICES=$(docker-compose ps -q | wc -l)
+
+            if [ "$RUNNING_SERVICES" -ne "$EXPECTED_SERVICES" ]; then
+              echo "🔴 Error: Expected $EXPECTED_SERVICES services, but only $RUNNING_SERVICES are running."
+              docker-compose ps # Print the status for debugging
+              exit 1 # Explicitly fail the script
+            else
+              echo "✅ Success: All $RUNNING_SERVICES services are up and running."
+              docker-compose ps
+            fi
 
             echo "--- Cleaning up old Docker images ---"
             docker image prune -f

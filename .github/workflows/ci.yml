@@ -1,10 +1,9 @@
 name: ✅ CI - Test and Build
 
 on:
-  pull_request:
+  push:
     branches:
-      - main
-    types: [opened, synchronize, reopened]
+      - dev
 
 jobs:
   # --- Job 1: Run all tests ---
