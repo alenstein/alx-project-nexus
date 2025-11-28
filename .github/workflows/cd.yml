@@ -126,8 +126,13 @@ jobs:
             PROJECT_DIR="/home/ubuntu/ecommerce-backend"
             cd $PROJECT_DIR
 
-            echo "--- Shutting down old services (if any) ---"
+            echo "--- Shutting down and removing old containers ---"
+            docker-compose down 
+            
             docker-compose down -v
+
+            echo "--- Cleaning up old Docker images ---"
+            docker image prune -f
 
             echo "--- Pulling latest Docker image from Docker Hub ---"
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
@@ -151,8 +156,5 @@ jobs:
               echo "✅ Success: All $RUNNING_SERVICES services are up and running."
               docker-compose ps
             fi
-
-            echo "--- Cleaning up old Docker images ---"
-            docker image prune -f
 
             echo "--- Deployment complete! ---"
