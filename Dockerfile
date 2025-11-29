@@ -13,9 +13,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the entire project into the builder stage
 COPY . .
 
-# Create a dummy .env file and run collectstatic
-# This collects all static files into the /app/staticfiles directory
-RUN echo "SECRET_KEY=dummy" > .env && \
+# Export dummy environment variables and run collectstatic
+# This makes the variables available for the collectstatic command
+RUN export SECRET_KEY='dummy' && \
+    export DEBUG='False' && \
+    export DB_NAME='dummy' && \
+    export DB_USER='dummy' && \
+    export DB_PASSWORD='dummy' && \
+    export DB_HOST='dummy' && \
     python eCommerce/manage.py collectstatic --noinput
 
 # --- Stage 2: Production ---
