@@ -49,11 +49,12 @@ jobs:
                 restart: unless-stopped
               web:
                 image: ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
+                working_dir: /app/eCommerce
                 command: >
                   sh -c "
-                    python eCommerce/manage.py migrate &&
-                    python eCommerce/manage.py create_superuser &&
-                    python eCommerce/manage.py seed_db &&
+                    python manage.py migrate &&
+                    python manage.py create_superuser &&
+                    python manage.py seed_db &&
                     /usr/local/bin/gunicorn eCommerce.wsgi:application --bind 0.0.0.0:8000
                   "
                 ports:
@@ -67,6 +68,7 @@ jobs:
                 restart: unless-stopped
               celery-worker:
                 image: ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
+                working_dir: /app/eCommerce
                 command: /usr/local/bin/celery -A eCommerce.celery worker --loglevel=info
                 env_file: .env
                 depends_on:
