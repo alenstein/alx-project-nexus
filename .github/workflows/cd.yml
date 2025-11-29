@@ -60,7 +60,7 @@ jobs:
                 ports:
                   - "8000:8000"
                 volumes:
-                  - ./staticfiles:/app/eCommerce/staticfiles
+                  - ./staticfiles:/app/staticfiles
                 env_file: .env
                 depends_on:
                   db:
