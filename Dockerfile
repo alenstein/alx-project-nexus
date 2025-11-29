@@ -16,7 +16,7 @@ COPY . .
 # Create a dummy .env file and run collectstatic
 # This collects all static files into the /app/staticfiles directory
 RUN echo "SECRET_KEY=dummy" > .env && \
-    python manage.py collectstatic --noinput
+    python eCommerce/manage.py collectstatic --noinput
 
 # --- Stage 2: Production ---
 FROM python:3.13-slim
