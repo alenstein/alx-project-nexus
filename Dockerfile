@@ -21,6 +21,9 @@ RUN export SECRET_KEY='dummy' && \
     export DB_USER='dummy' && \
     export DB_PASSWORD='dummy' && \
     export DB_HOST='dummy' && \
+    export DB_PORT='5432' && \
+    export CELERY_BROKER_URL='dummy' && \
+    export CELERY_RESULT_BACKEND='dummy' && \
     python eCommerce/manage.py collectstatic --noinput
 
 # --- Stage 2: Production ---
