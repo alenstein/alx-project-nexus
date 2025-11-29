@@ -1,4 +1,5 @@
 # --- Stage 1: Builder ---
+# Use 'as' keyword for aliasing the stage
 FROM python:3.13-slim as builder
 
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -8,6 +9,14 @@ WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the entire project into the builder stage
+COPY . .
+
+# Create a dummy .env file and run collectstatic
+# This collects all static files into the /app/staticfiles directory
+RUN echo "SECRET_KEY=dummy" > .env && \
+    python manage.py collectstatic --noinput
 
 # --- Stage 2: Production ---
 FROM python:3.13-slim
@@ -22,16 +31,13 @@ WORKDIR /app
 COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Copy the entire project into the container
+# Copy the application code from the current directory
 COPY . .
 
-# Create a dummy .env file and run collectstatic
-# This is necessary for the build process, even though the real .env file is used at runtime.
-RUN echo "SECRET_KEY=dummy" > .env && \
-    python manage.py collectstatic --noinput
+# Copy the collected static files from the builder stage
+COPY --from=builder /app/staticfiles /app/staticfiles/
 
-# Copy the entrypoint script and make it executable.
-COPY entrypoint.sh .
+# Make the entrypoint script executable
 RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 8000
