@@ -5,15 +5,15 @@ set -e
 
 # Apply database migrations
 echo "Applying database migrations..."
-python manage.py migrate
+python eCommerce/manage.py migrate
 
 # Create superuser if it doesn't exist
 echo "Creating superuser..."
-python manage.py create_superuser
+python eCommerce/manage.py create_superuser
 
 # Run the database seeder.
 echo "Checking if database seeding is required..."
-python manage.py seed_db
+python eCommerce/manage.py seed_db
 
 echo "Setup tasks complete. Starting Gunicorn server..."
 # Start the Gunicorn server (the main process for the container)
