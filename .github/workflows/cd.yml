@@ -143,6 +143,12 @@ jobs:
 
             echo "--- Pausing for 15 seconds to allow services to stabilize ---"
             sleep 15
+            
+            docker-compose down -v
+            
+            sleep 5
+            
+            docker-compose up 
 
             echo "--- Verifying running services ---"
             # We expect 4 services to be running: db, redis, web, celery-worker
