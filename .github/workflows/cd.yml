@@ -51,9 +51,9 @@ jobs:
                 image: ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
                 command: >
                   sh -c "
-                    python manage.py migrate &&
-                    python manage.py create_superuser &&
-                    python manage.py seed_db &&
+                    python eCommerce/manage.py migrate &&
+                    python eCommerce/manage.py create_superuser &&
+                    python eCommerce/manage.py seed_db &&
                     /usr/local/bin/gunicorn eCommerce.wsgi:application --bind 0.0.0.0:8000
                   "
                 ports:
@@ -67,7 +67,7 @@ jobs:
                 restart: unless-stopped
               celery-worker:
                 image: ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
-                command: /usr/local/bin/celery -A eCommerce worker --loglevel=info
+                command: /usr/local/bin/celery -A eCommerce.celery worker --loglevel=info
                 env_file: .env
                 depends_on:
                   web:
@@ -143,12 +143,6 @@ jobs:
 
             echo "--- Pausing for 15 seconds to allow services to stabilize ---"
             sleep 15
-            
-            docker-compose down -v
-            
-            sleep 5
-            
-            docker-compose up 
 
             echo "--- Verifying running services ---"
             # We expect 4 services to be running: db, redis, web, celery-worker
