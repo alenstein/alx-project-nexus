@@ -17,14 +17,21 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     restart: unless-stopped
 
   web:
     build:
       context: .
       dockerfile: Dockerfile
-    entrypoint: /app/entrypoint.sh
+    working_dir: /app/eCommerce
+    command: >
+      sh -c "
+        python manage.py migrate &&
+        python manage.py create_superuser &&
+        python manage.py seed_db &&
+        gunicorn eCommerce.wsgi:application --bind 0.0.0.0:8000
+      "
     ports:
       - "8000:8000"
     env_file:
@@ -40,7 +47,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: /usr/local/bin/celery -A eCommerce worker --loglevel=info
+    working_dir: /app/eCommerce
+    command: celery -A eCommerce.celery worker --loglevel=info
     env_file:
       - .env
     depends_on:
