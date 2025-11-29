@@ -51,9 +51,6 @@ jobs:
                 image: ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
                 command: >
                   sh -c "
-                    echo '--- DEBUG: Verifying DB_PASSWORD ---' &&
-                    echo 'DB_PASSWORD is: [${DB_PASSWORD}]' &&
-                    echo '------------------------------------' &&
                     python manage.py migrate &&
                     python manage.py create_superuser &&
                     python manage.py seed_db &&
