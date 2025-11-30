@@ -3,6 +3,7 @@ from rest_framework.views import exception_handler
 from rest_framework.response import Response
 from rest_framework import status
 from django.http import Http404
+from django.core.exceptions import DisallowedHost
 from rest_framework.exceptions import (
     ValidationError,
     AuthenticationFailed,
@@ -33,7 +34,13 @@ def custom_exception_handler(exc, context):
         "errors": {}
     }
 
-    # --- Handle Specific DRF Exceptions ---
+    # --- Handle Specific Django and DRF Exceptions ---
+
+    if isinstance(exc, DisallowedHost):
+        # Handle DisallowedHost specifically, as it's a common deployment issue.
+        logger.warning(f"DisallowedHost: {exc}. Request from host: {context['request'].get_host()}")
+        error_payload["errors"] = {'detail': 'Invalid host header.'}
+        return Response(error_payload, status=status.HTTP_400_BAD_REQUEST)
 
     if isinstance(exc, ValidationError):
         # For validation errors, the details are already well-structured.
