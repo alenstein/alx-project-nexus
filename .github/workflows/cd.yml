@@ -23,12 +23,14 @@ jobs:
             # Exit immediately if any command fails
             set -e
 
-            # --- 1. Environment Setup ---
-            echo "--- Setting up project directory and .env file ---"
+            # --- 1. Environment and Directory Setup ---
+            echo "--- Setting up project directories ---"
             PROJECT_DIR="/home/ubuntu/ecommerce-backend"
             STATIC_DIR="/var/www/ecommerce/staticfiles"
+            MEDIA_DIR="/var/www/ecommerce/media"
             mkdir -p $PROJECT_DIR
             sudo mkdir -p $STATIC_DIR
+            sudo mkdir -p $MEDIA_DIR
             sudo chown -R www-data:www-data /var/www/ecommerce
             sudo chmod -R 755 /var/www/ecommerce
             cd $PROJECT_DIR
@@ -73,11 +75,11 @@ jobs:
                 volumes:
                   - postgres_data:/var/lib/postgresql/data/
                 environment:
-                  POSTGRES_USER: ${{ secrets.DB_USER }}
-                  POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
-                  POSTGRES_DB: ${{ secrets.DB_NAME }}
+                  POSTGRES_USER: \${DB_USER}
+                  POSTGRES_PASSWORD: \${DB_PASSWORD}
+                  POSTGRES_DB: \${DB_NAME}
                 healthcheck:
-                  test: ["CMD-SHELL", "pg_isready -U ${{ secrets.DB_USER }} -d ${{ secrets.DB_NAME }}"]
+                  test: ["CMD-SHELL", "pg_isready -U \${DB_USER} -d \${DB_NAME}"]
                   interval: 5s
                   timeout: 5s
                   retries: 5
@@ -103,6 +105,7 @@ jobs:
                   - "8000:8000"
                 volumes:
                   - $STATIC_DIR:/app/staticfiles
+                  - $MEDIA_DIR:/app/media
                 env_file: .env
                 depends_on:
                   db:
@@ -140,6 +143,10 @@ jobs:
 
                 location /static/ {
                     alias /var/www/ecommerce/staticfiles/;
+                }
+
+                location /media/ {
+                    alias /var/www/ecommerce/media/;
                 }
 
                 location / {

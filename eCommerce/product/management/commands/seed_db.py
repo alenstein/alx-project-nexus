@@ -16,24 +16,39 @@ from product.models import (
 
 # --- Configuration ---
 IMAGE_PROVIDER_URL = "https://picsum.photos/800/800"
-MIN_PRODUCT_COUNT = 10  # The script will run if there are fewer than this many products.
+MIN_PRODUCT_COUNT = 25  # The script will run if there are fewer than this many products.
 
 # --- Sample Data ---
-CATEGORIES = ["T-Shirts", "Hoodies", "Jeans", "Sneakers", "Hats"]
-BRANDS = ["Nike", "Adidas", "Puma", "Levi's", "Vans"]
-COLOURS = ["Black", "White", "Red", "Blue", "Grey"]
-SIZES = ["XS", "S", "M", "L", "XL"]
+CATEGORIES = ["T-Shirts", "Hoodies", "Jeans", "Sneakers", "Hats", "Jackets", "Shorts"]
+BRANDS = ["Nike", "Adidas", "Puma", "Levi's", "Vans", "The North Face", "Under Armour"]
+COLOURS = ["Black", "White", "Red", "Blue", "Grey", "Green", "Yellow"]
+SIZES = ["XS", "S", "M", "L", "XL", "XXL"]
 PRODUCT_TEMPLATES = [
     {"name": "Classic Crewneck", "category": "T-Shirts"},
     {"name": "Graphic Print Tee", "category": "T-Shirts"},
+    {"name": "V-Neck Tee", "category": "T-Shirts"},
     {"name": "Pullover Hoodie", "category": "Hoodies"},
     {"name": "Zip-Up Hoodie", "category": "Hoodies"},
+    {"name": "Lightweight Hoodie", "category": "Hoodies"},
     {"name": "Slim Fit Jeans", "category": "Jeans"},
     {"name": "Straight Leg Jeans", "category": "Jeans"},
+    {"name": "Bootcut Jeans", "category": "Jeans"},
     {"name": "Running Shoes", "category": "Sneakers"},
     {"name": "High-Top Sneakers", "category": "Sneakers"},
+    {"name": "Skate Shoes", "category": "Sneakers"},
     {"name": "Baseball Cap", "category": "Hats"},
     {"name": "Beanie", "category": "Hats"},
+    {"name": "Bucket Hat", "category": "Hats"},
+    {"name": "Denim Jacket", "category": "Jackets"},
+    {"name": "Windbreaker", "category": "Jackets"},
+    {"name": "Bomber Jacket", "category": "Jackets"},
+    {"name": "Cargo Shorts", "category": "Shorts"},
+    {"name": "Athletic Shorts", "category": "Shorts"},
+    {"name": "Chino Shorts", "category": "Shorts"},
+    {"name": "Polo Shirt", "category": "T-Shirts"},
+    {"name": "Long-Sleeve Tee", "category": "T-Shirts"},
+    {"name": "Fleece Jacket", "category": "Jackets"},
+    {"name": "Canvas Sneakers", "category": "Sneakers"},
 ]
 
 class Command(BaseCommand):
