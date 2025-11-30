@@ -43,7 +43,11 @@ class UserRegistrationView(generics.CreateAPIView):
         # Generate token and confirmation link
         token = default_token_generator.make_token(user)
         uid = urlsafe_base64_encode(force_bytes(user.pk))
-        confirm_link = f"http://localhost:8000/api/v1/auth/confirm-email/{uid}/{token}/"
+        
+        # Manually construct the domain for the confirmation link
+        # In production, use the server's IP. In development, use localhost.
+        domain = '51.20.86.40' if not settings.DEBUG else 'localhost:8000'
+        confirm_link = f"http://{domain}/api/v1/auth/confirm-email/{uid}/{token}/"
         
         subject = 'Activate Your E-Commerce Account'
         message = f'Hi {user.first_name},\n\nPlease click the link below to confirm your email address and activate your account:\n{confirm_link}'

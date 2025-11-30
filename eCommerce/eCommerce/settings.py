@@ -32,7 +32,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.sites', # Required for the sites framework
     
     # Third-party apps
     'rest_framework',
@@ -48,9 +47,6 @@ INSTALLED_APPS = [
     'product',
     'cart',
 ]
-
-# Required by the sites framework
-SITE_ID = 1
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
