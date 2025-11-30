@@ -8,90 +8,28 @@ on:
       - main
 
 jobs:
-  # --- Job 1: Prepare the Server ---
-  prepare-server:
-    name: ⚙️ Prepare EC2 Server
+  deploy:
+    name: 🚀 Deploy to Production
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - name: 📝 Create Config Files on EC2
+      - name: 🚚 Deploy and Configure Server
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           script: |
-            echo "--- Navigating to project directory ---"
+            # Exit immediately if any command fails
+            set -e
+
+            # --- 1. Environment Setup ---
+            echo "--- Setting up project directory and .env file ---"
             PROJECT_DIR="/home/ubuntu/ecommerce-backend"
             mkdir -p $PROJECT_DIR
             cd $PROJECT_DIR
 
-            echo "--- Creating docker-compose.yml ---"
-            cat << EOF > docker-compose.yml
-            version: '3.8'
-            services:
-              db:
-                image: postgres:14-alpine
-                volumes:
-                  - postgres_data:/var/lib/postgresql/data/
-                environment:
-                  POSTGRES_USER: ${{ secrets.DB_USER }}
-                  POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
-                  POSTGRES_DB: ${{ secrets.DB_NAME }}
-                healthcheck:
-                  test: ["CMD-SHELL", "pg_isready -U ${{ secrets.DB_USER }} -d ${{ secrets.DB_NAME }}"]
-                  interval: 5s
-                  timeout: 5s
-                  retries: 5
-                restart: unless-stopped
-              redis:
-                image: redis:7-alpine
-                restart: unless-stopped
-              web:
-                image: ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
-                working_dir: /app/eCommerce
-                command: >
-                  sh -c "
-                    sleep 5
-                    echo 'Waiting for database...'
-                    while ! nc -z db 5432; do
-                      sleep 0.1
-                    done
-                    echo 'Database started'
-
-                    python manage.py migrate &&
-                    python manage.py create_superuser &&
-                    python manage.py seed_db &&
-                    /usr/local/bin/gunicorn eCommerce.wsgi:application --bind 0.0.0.0:8000
-        
-                  "
-                ports:
-                  - "8000:8000"
-                volumes:
-                  - ./staticfiles:/app/staticfiles
-                env_file: .env
-                depends_on:
-                  db:
-                    condition: service_healthy
-                  redis:
-                    condition: service_started
-                restart: unless-stopped
-              celery-worker:
-                image: ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
-                working_dir: /app/eCommerce
-                command: /usr/local/bin/celery -A eCommerce.celery worker --loglevel=info
-                env_file: .env
-                depends_on:
-                  web:
-                    condition: service_started
-                  redis:
-                    condition: service_started
-                restart: unless-stopped
-            volumes:
-              postgres_data:
-            EOF
-
-            echo "--- Creating .env file from secrets ---"
+            # Create the .env file from secrets
             cat << EOF > .env
             SECRET_KEY=${{ secrets.SECRET_KEY }}
             DEBUG=False
@@ -115,59 +53,103 @@ jobs:
             SUPERUSER_PASSWORD=${{ secrets.SUPERUSER_PASSWORD }}
             EOF
 
-            echo "--- Server preparation complete ---"
-
-  # --- Job 2: Deploy the Services ---
-  deploy-services:
-    name: 🚀 Deploy and Verify Services
-    needs: prepare-server
-    runs-on: ubuntu-latest
-    steps:
-      - name: 🚚 Deploy, Monitor, and Verify
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
-          script: |
-            # Exit immediately if any command fails
-            set -e
-
-            echo "--- Navigating to project directory ---"
-            PROJECT_DIR="/home/ubuntu/ecommerce-backend"
-            cd $PROJECT_DIR
-
+            # --- 2. Docker Cleanup ---
             echo "--- Shutting down and removing all existing Docker containers ---"
-            # Stop all running containers. `|| true` prevents errors if no containers are running.
             docker stop $(docker ps -q) || true
-            # Remove all containers. `|| true` prevents errors if no containers exist.
             docker rm $(docker ps -a -q) || true
-
-            echo "--- Pruning Docker system to remove unused data ---"
-            # Prune the system to remove all unused Docker data (images, networks, volumes).
             docker system prune -af --volumes
 
-            echo "--- Pulling latest Docker image from Docker Hub ---"
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
+            # --- 3. Create Production Docker Compose File ---
+            echo "--- Creating production docker-compose.yml ---"
+            cat << EOF > docker-compose.yml
+            version: '3.8'
+            services:
+              db:
+                image: postgres:14-alpine
+                volumes:
+                  - postgres_data:/var/lib/postgresql/data/
+                environment:
+                  POSTGRES_USER: \${DB_USER}
+                  POSTGRES_PASSWORD: \${DB_PASSWORD}
+                  POSTGRES_DB: \${DB_NAME}
+                healthcheck:
+                  test: ["CMD-SHELL", "pg_isready -U \${DB_USER} -d \${DB_NAME}"]
+                  interval: 5s
+                  timeout: 5s
+                  retries: 5
+                restart: unless-stopped
+              redis:
+                image: redis:7-alpine
+                restart: unless-stopped
+              web:
+                image: ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
+                working_dir: /app/eCommerce
+                command: >
+                  sh -c "
+                    echo 'Waiting for database...'
+                    while ! nc -z db 5432; do sleep 0.1; done
+                    echo 'Database started'
+                    python manage.py migrate &&
+                    python manage.py create_superuser &&
+                    python manage.py seed_db &&
+                    gunicorn eCommerce.wsgi:application --bind 0.0.0.0:8000
+                  "
+                ports:
+                  - "8000:8000"
+                volumes:
+                  - ./staticfiles:/app/staticfiles
+                env_file: .env
+                depends_on:
+                  db:
+                    condition: service_healthy
+                  redis:
+                    condition: service_started
+                restart: unless-stopped
+              celery-worker:
+                image: ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
+                working_dir: /app/eCommerce
+                command: celery -A eCommerce.celery worker --loglevel=info
+                env_file: .env
+                depends_on:
+                  web:
+                    condition: service_started
+                  redis:
+                    condition: service_started
+                restart: unless-stopped
+            volumes:
+              postgres_data:
+            EOF
 
+            # --- 4. Pull Images and Start Services ---
+            echo "--- Pulling latest Docker images ---"
+            docker-compose pull
             echo "--- Starting all services with Docker Compose ---"
-            docker-compose --env-file .env up -d
+            docker-compose up -d
 
-            echo "--- Pausing for 15 seconds to allow services to stabilize ---"
-            sleep 15
+            # --- 5. Configure Nginx ---
+            echo "--- Configuring and Restarting Nginx ---"
+            sudo bash -c 'cat <<EOF > /etc/nginx/sites-available/ecommerce
+            server {
+                listen 80;
+                server_name ${{ secrets.EC2_HOST }};
 
-            echo "--- Verifying running services ---"
-            # We expect 4 services to be running: db, redis, web, celery-worker
-            EXPECTED_SERVICES=4
-            RUNNING_SERVICES=$(docker-compose ps -q | wc -l)
+                location /static/ {
+                    alias /home/ubuntu/ecommerce-backend/staticfiles/;
+                }
 
-            if [ "$RUNNING_SERVICES" -ne "$EXPECTED_SERVICES" ]; then
-              echo "🔴 Error: Expected $EXPECTED_SERVICES services, but only $RUNNING_SERVICES are running."
-              docker-compose ps # Print the status for debugging
-              exit 1 # Explicitly fail the script
-            else
-              echo "✅ Success: All $RUNNING_SERVICES services are up and running."
-              docker-compose ps
-            fi
+                location / {
+                    proxy_pass http://127.0.0.1:8000;
+                    proxy_set_header Host \$host;
+                    proxy_set_header X-Real-IP \$remote_addr;
+                    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto \$scheme;
+                    proxy_connect_timeout 300s;
+                    proxy_read_timeout 300s;
+                }
+            }
+            EOF'
+            sudo ln -sf /etc/nginx/sites-available/ecommerce /etc/nginx/sites-enabled/
+            sudo nginx -t
+            sudo systemctl restart nginx
 
             echo "--- Deployment complete! ---"
