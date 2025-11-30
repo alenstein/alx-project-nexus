@@ -127,7 +127,12 @@ jobs:
             echo "--- Starting all services with Docker Compose ---"
             docker-compose up -d
 
-            # --- 5. Configure Nginx ---
+            # --- 5. Set File Permissions ---
+            echo "--- Setting permissions for static files ---"
+            sudo chown -R www-data:www-data $PROJECT_DIR/staticfiles
+            sudo chmod -R 755 $PROJECT_DIR/staticfiles
+
+            # --- 6. Configure Nginx ---
             echo "--- Configuring and Restarting Nginx ---"
             sudo bash -c 'cat <<EOF > /etc/nginx/sites-available/ecommerce
             server {
