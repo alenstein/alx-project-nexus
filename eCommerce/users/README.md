@@ -1,83 +1,55 @@
-# Users Module
+# Users App
 
 ## Overview
 
-The `users` module is the cornerstone of the e-commerce platform's identity and access management system. It handles all aspects of user management, including account creation, secure authentication, profile management, and physical addresses. The system is designed to be secure, scalable, and easy to integrate with other modules.
+The `users` app is responsible for all aspects of user management, authentication, and authorization within the eCommerce platform. It features a custom user model to provide flexibility beyond Django's default, and it uses JSON Web Tokens (JWT) for secure, stateless authentication.
+
+---
 
 ## Data Models
 
-The data schema is designed to be robust and flexible, separating user identity from address information for reusability and clarity.
+*   **`SiteUser`**: This is the custom user model that replaces Django's default `User`. It uses the email address as the unique identifier (username) and includes standard fields like `first_name`, `last_name`, and `is_active`. Using a custom user model from the start is a best practice that allows for easy future extension.
 
-### Model ERD (Entity-Relationship Diagram)
+*   **`UserAddress`**: This model stores shipping and billing addresses associated with a `SiteUser`. A user can have multiple addresses, with one marked as the default.
 
-The following diagram illustrates the relationships between the models in this module.
+---
 
-![User Models ERD](user-model-erd.png)
+## Key Features & Logic
 
-> **Note:** You can generate a similar diagram for your models by installing `django-extensions` and `graphviz`, then running the command:
-> `python manage.py graph_models users -o user_models_erd.png`
+*   **Email as Username:** The system uses the email address for login, which is a common and user-friendly approach.
+*   **Asynchronous Email Confirmation:** Upon registration, a new user is created in an `is_active=False` state. A Celery background task is dispatched to send a confirmation email with a unique activation link. This ensures the user registration process is fast and does not get blocked by email sending delays.
+*   **JWT-Based Authentication:** The application uses `djangorestframework-simplejwt` to handle authentication. Upon successful login, the API provides short-lived access tokens and long-lived refresh tokens, which is a standard and secure practice for modern APIs.
 
-### `SiteUser`
-This is the custom user model for the entire project, inheriting from Django's `AbstractUser`.
--   **Primary Identifier:** It uses the `email` field as the unique identifier for authentication (`USERNAME_FIELD = 'email'`), which is standard for modern web applications.
--   **Email Verification:** The `is_active` flag is set to `False` by default upon creation. A user cannot log in until they verify their email address, activating their account.
--   **Profile Data:** Includes standard fields like `first_name`, `last_name`, and an optional `phone_number`.
-
-### `Address` & `Country`
-To avoid data duplication, physical addresses are stored in a decoupled `Address` model.
--   An `Address` is not directly tied to a user, making the model reusable if, for example, the business needs to store supplier addresses in the future.
--   `Country` is a simple lookup table to ensure standardized country data, linked via a foreign key.
-
-### `UserAddress`
-This is the junction (or "through") model that links a `SiteUser` to one or more `Address` records.
--   It allows a single user to have multiple addresses (e.g., "Home," "Work," "Billing").
--   It contains a crucial `is_default` boolean field. The model's `save()` method includes logic to ensure that if a new address is set as the default, all other addresses for that user are automatically unset as default.
-
-## Authentication & Authorization
-
-### Technology
--   **JWT (JSON Web Tokens):** Authentication is handled via JWT using the `djangorestframework-simplejwt` library. This is a stateless and secure method ideal for APIs.
--   **Token Lifespan:** Access tokens are short-lived (5 minutes) for security, while refresh tokens are long-lived (1 day) for a good user experience.
--   **Security Measures:** Refresh token rotation and blacklisting are enabled. When a refresh token is used, a new one is issued, and the old one is blacklisted, preventing token reuse in case of theft.
-
-### Authentication Flow
-
-1.  **Registration:** A new user signs up by sending their details to `POST /api/v1/auth/register/`. The system creates a new `SiteUser` with `is_active=False`.
-2.  **Email Confirmation:** An email is dispatched to the user containing a unique, token-based confirmation link.
-3.  **Activation:** The user clicks the link (`GET /api/v1/auth/confirm-email/<uid>/<token>/`), which is validated by the server. If valid, the user's account is switched to `is_active=True`.
-4.  **Login:** The now-active user can log in at `POST /api/v1/token/`. The custom `CustomTokenObtainPairView` verifies their credentials and `is_active` status, returning an `access` and `refresh` token pair if successful.
-5.  **Logout:** An authenticated user logs out by sending their `refresh` token to `POST /api/v1/auth/logout/`. The token is added to a blacklist, effectively invalidating the session.
+---
 
 ## API Endpoints
 
-All endpoints are prefixed with `/api/v1/auth/`.
+The `users` app exposes the following endpoints for authentication and user profile management.
 
-| Endpoint | Method | Description | Permissions |
-| --- | --- | --- | --- |
-| `/register/` | `POST` | Registers a new, inactive user. | `AllowAny` |
-| `/confirm-email/<uid>/<token>/` | `GET` | Activates a user's account via email link. | `AllowAny` |
-| `/token/` | `POST` | Logs in an active user (part of root URLs). | `AllowAny` |
-| `/token/refresh/` | `POST` | Refreshes an access token (part of root URLs). | `AllowAny` |
-| `/logout/` | `POST` | Logs out a user by blacklisting their token. | `IsAuthenticated` |
-| `/me/` | `GET`, `PATCH` | Retrieve or partially update the authenticated user's profile. | `IsAuthenticated` |
-| `/addresses/` | `GET`, `POST` | List all of the user's addresses or create a new one. | `IsAuthenticated` |
-| `/addresses/<id>/` | `GET`, `PUT`, `PATCH`, `DELETE` | Manage a specific address for the user. | `IsAuthenticated` |
+### Authentication
 
-## Serializers
+*   **Endpoint:** `POST /api/v1/auth/register/`
+    *   **Description:** Allows a new user to register. Creates an inactive user and triggers the confirmation email.
 
--   **`UserRegistrationSerializer`**: Validates user input for registration, checks for password mismatch, and handles the creation of the inactive `SiteUser`.
--   **`CustomTokenObtainPairSerializer`**: Extends the default JWT serializer to add a critical check: it prevents users with `is_active=False` from logging in.
--   **`UserDetailSerializer`**: Safely exposes non-sensitive user data for profile viewing and updating.
--   **`AddressSerializer` & `UserAddressSerializer`**: Work together to handle the nested creation and display of user addresses, making the API intuitive to use.
+*   **Endpoint:** `GET /api/v1/auth/confirm-email/{uidb64}/{token}/`
+    *   **Description:** A special endpoint that the user visits by clicking the link in their email. It validates the token and activates the user's account.
 
-## Testing
+*   **Endpoint:** `POST /api/v1/token/`
+    *   **Description:** The login endpoint. Takes the user's email and password and returns JWT access and refresh tokens upon success.
 
-The module includes a comprehensive test suite in `tests.py` that provides confidence in the correctness and security of the implementation. It covers:
--   Model integrity and custom logic.
--   End-to-end API flows for the entire authentication lifecycle.
--   Permission checks and security rules.
+*   **Endpoint:** `POST /api/v1/token/refresh/`
+    *   **Description:** Takes a valid refresh token and returns a new access token.
 
-To run the tests for this module, execute the following command:
-```bash
-python manage.py test users
-```
+*   **Endpoint:** `POST /api/v1/auth/logout/`
+    *   **Description:** Blacklists the user's current refresh token, effectively logging them out. Requires authentication.
+
+### User & Address Management
+
+*   **Endpoint:** `GET, PUT, PATCH /api/v1/auth/user/`
+    *   **Description:** Allows an authenticated user to retrieve or update their own profile details.
+
+*   **Endpoint:** `GET, POST /api/v1/auth/addresses/`
+    *   **Description:** Allows an authenticated user to view their list of saved addresses or add a new one.
+
+*   **Endpoint:** `GET, PUT, DELETE /api/v1/auth/addresses/{id}/`
+    *   **Description:** Allows an authenticated user to retrieve, update, or delete a specific address.

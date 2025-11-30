@@ -1,129 +1,126 @@
-# E-Commerce Backend
+# Scalable eCommerce Backend API
 
-This project is a robust backend system for an e-commerce product catalog. It handles product data management, user authentication, and provides APIs for filtering, sorting, and pagination, simulating a real-world scenario for backend engineers.
+This repository contains the source code for a robust, scalable, and secure backend system designed for a modern eCommerce platform. Built with Django and the Django REST Framework, this project serves as a production-ready foundation for managing products, user authentication, and shopping cart functionality.
 
-## Project Goals
+The entire application is containerized with Docker and includes a complete CI/CD pipeline for automated testing and deployment to AWS, making it an excellent reference for modern backend development practices.
 
--   **CRUD APIs:** Build APIs for managing products, categories, and user authentication.
--   **Filtering, Sorting, Pagination:** Implement robust logic for efficient product discovery.
--   **Database Optimization:** Design a high-performance database schema to support seamless queries.
+![Project Architecture](https://i.imgur.com/your-architecture-diagram.png) <!-- Optional: Create and upload an architecture diagram -->
 
-## Technologies Used
-
--   **Django & Django Rest Framework:** For building a scalable backend framework.
--   **PostgreSQL:** As the relational database for optimized performance.
--   **django-environ:** For managing environment variables.
--   **JWT (JSON Web Tokens):** For secure, stateless user authentication.
--   **drf-yasg (Swagger/OpenAPI):** To automatically generate API documentation.
+---
 
 ## Key Features
 
--   **User Management:** Custom user model with email-based authentication.
--   **Product Catalog:** A multi-tiered product model including categories, brands, colors, and sizes.
--   **Shopping Cart:** A persistent shopping cart for each user.
--   **API Documentation:** Automatically generated and interactive API documentation.
+*   **RESTful API:** A complete API for managing products, categories, users, and shopping carts.
+*   **JWT Authentication:** Secure, token-based authentication for all user-related endpoints, including registration with email confirmation.
+*   **Asynchronous Task Processing:** Celery and Redis are integrated to handle background tasks like sending confirmation emails, ensuring a fast and responsive user experience.
+*   **Advanced Product Filtering:** The API supports searching, filtering by category and brand, and sorting by price.
+*   **Pagination:** All list endpoints are paginated to ensure efficient handling of large datasets.
+*   **Automated API Documentation:** The project uses `drf-spectacular` to automatically generate an OpenAPI 3.0 schema, with interactive Swagger UI and ReDoc interfaces.
+*   **Containerized Environment:** The entire application stack (Django, PostgreSQL, Redis, Celery) is containerized with Docker for consistent development and production environments.
+*   **Automated CI/CD Pipeline:** A GitHub Actions workflow automates testing, Docker image builds, and deployment to an AWS EC2 instance.
+*   **Production-Ready Deployment:** The project is deployed on AWS EC2 with Nginx as a reverse proxy and UFW for firewall management.
 
-## Project Structure
+---
 
-The project is organized into the following Django apps:
+## Technology Stack & Architecture
 
--   `eCommerce/`: The main project directory containing settings and root URL configuration.
--   `users/`: Manages user accounts, authentication, and addresses.
--   `product/`: Handles the product catalog, including categories, products, and inventory.
--   `cart/`: Manages the shopping cart and its items.
+This project follows a standard, high-performance architecture for modern web applications.
+
+*   **Backend:** Django, Django REST Framework (DRF)
+*   **Database:** PostgreSQL
+*   **Application Server:** Gunicorn
+*   **Asynchronous Tasks:** Celery, Redis
+*   **Containerization:** Docker, Docker Compose
+*   **API Documentation:** `drf-spectacular` (Swagger UI / ReDoc)
+*   **CI/CD:** GitHub Actions
+*   **Deployment:** AWS EC2, Nginx, UFW
+
+### Deployment Architecture
+
+1.  **Nginx (Reverse Proxy):** Acts as the entry point for all incoming traffic. It serves static and media files directly for high performance and forwards all other requests to the Gunicorn application server.
+2.  **Gunicorn (Application Server):** Manages the Django application, running multiple worker processes to handle concurrent requests.
+3.  **Docker & Docker Compose:** The entire application stack, including the database, cache, and application server, is containerized, ensuring consistency and isolation.
+4.  **GitHub Actions (CI/CD):** Automates the entire deployment process, from running tests to deploying the latest version of the application to the server.
+
+---
 
 ## Getting Started
 
 ### Prerequisites
 
--   Python 3.8+
--   PostgreSQL
--   Git
+*   Docker and Docker Compose
+*   An active Docker Hub account (for pushing images if you fork the project)
+*   An AWS account with a configured EC2 instance (for production deployment)
 
-### Installation & Setup
+### Local Development
+
+This project is configured for easy local development using a dedicated development compose file.
 
 1.  **Clone the repository:**
-    ```bash
-    git clone <repository-url>
-    cd eCommerce
+    ```sh
+    git clone https://github.com/your-username/alx-project-nexus.git
+    cd alx-project-nexus
     ```
 
-2.  **Create a virtual environment and install dependencies:**
-    ```bash
-    python -m venv venv
-    source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
-    pip install -r requirements.txt
+2.  **Create a `.env` file:**
+    Create a `.env` file in the project root by copying the example file. This file will hold your local environment variables.
+    ```sh
+    cp .env.example .env
+    ```
+    Fill in the `.env` file with your desired local settings for the database, secret key, etc.
+
+3.  **Build and run the services:**
+    Use the `docker-compose.dev.yml` file to build and run the containers.
+    ```sh
+    docker-compose -f docker-compose.dev.yml up --build
     ```
 
-3.  **Configure environment variables:**
-    -   Rename the `.env.example` file to `.env`.
-    -   Update the `.env` file with your database credentials and a new Django `SECRET_KEY`.
-    ```bash
-    mv .env.example .env
-    # Now edit the .env file
-    ```
+4.  **Access the application:**
+    *   **API:** `http://localhost:8000/`
+    *   **Admin:** `http://localhost:8000/admin/`
+    *   **Swagger UI:** `http://localhost:8000/api/swagger-ui/`
 
-4.  **Set up the database:**
-    -   Ensure your PostgreSQL server is running.
-    -   Create a new database with the name you specified in your `.env` file.
+---
 
-5.  **Run database migrations:**
-    ```bash
-    python manage.py migrate
-    ```
+## Production Deployment
 
-6.  **Create a superuser:**
-    This will allow you to access the Django admin interface.
-    ```bash
-    python manage.py createsuperuser
-    ```
+The production deployment is fully automated via the GitHub Actions CI/CD pipeline defined in `.github/workflows/cd.yml`. **There are no manual deployment steps.**
 
-7.  **Run the development server:**
-    ```bash
-    python manage.py runserver
-    ```
-    The API will be available at `http://127.0.0.1:8000/`.
+### Deployment Process
 
-## API Endpoints
+1.  **Trigger:** The workflow is triggered when a pull request is merged into the `main` branch.
+2.  **Build & Push:** A production-ready Docker image is built and pushed to Docker Hub.
+3.  **Deploy to EC2:** The workflow securely connects to the production server via SSH.
+4.  **Server-Side Script:** On the server, the script automatically:
+    *   Sets up the required directories (`/var/www/ecommerce/`) and permissions for Nginx.
+    *   Creates the `.env` and `docker-compose.yml` files from GitHub Secrets.
+    *   Stops any old containers and prunes the Docker system to ensure a clean state.
+    *   Pulls the new Docker image from Docker Hub.
+    *   Starts the application stack in detached mode using Docker Compose.
+    *   Configures and restarts the Nginx reverse proxy to serve the application and its static/media files.
 
-The API is versioned under `/api/v1/`.
+### Replicating the Deployment
 
--   **Admin:** `http://127.0.0.1:8000/admin/`
--   **API Documentation:**
-    -   Swagger UI: `http://127.0.0.1:8000/swagger/`
-    -   ReDoc: `http://127.0.0.1:8000/redoc/`
--   **Authentication:**
-    -   `POST /api/v1/token/`: Obtain JWT token pair (access and refresh).
-    -   `POST /api/v1/token/refresh/`: Refresh an expired access token.
-    -   User registration and management endpoints are available under `/api/v1/auth/`.
--   **Products:** `/api/v1/products/`
--   **Shopping Cart:** `/api/v1/cart/`
+To fork this project and deploy it to your own server, you must configure the following secrets in your repository's settings (`Settings > Secrets and variables > Actions`):
 
-## Git Commit Workflow
+*   `EC2_HOST`: The public IP address of your EC2 instance.
+*   `EC2_USERNAME`: The username for the EC2 instance (e.g., `ubuntu`).
+*   `EC2_SSH_PRIVATE_KEY`: The private SSH key used to access the EC2 instance.
+*   `DOCKERHUB_USERNAME`: Your Docker Hub username.
+*   `DOCKERHUB_TOKEN`: A Docker Hub access token with push permissions.
+*   `SECRET_KEY`: Your Django secret key.
+*   `ALLOWED_HOSTS`: A comma-separated list of allowed hosts (e.g., `your_server_ip,your_domain.com`).
+*   `DB_NAME`, `DB_USER`, `DB_PASSWORD`: Credentials for the PostgreSQL database.
+*   ... (and all other secrets required by your `.env` file).
 
-This project follows the [Conventional Commits](https://www.conventionalcommits.org/) specification. The following is a recommended sequence of commits that aligns with the project roadmap.
+---
 
-### Phase 0: Project Setup
--   `feat: set up Django project with PostgreSQL`
+## API Documentation
 
+The API documentation is automatically generated and can be accessed at the following endpoints on your deployed server:
 
-### Phase 1: User Authentication
-- `feat(users): implement complete user registration flow with serializers, views, and tests`
+*   **Swagger UI:** `http://<your_server_ip>/api/swagger-ui/`
+*   **ReDoc:** `http://<your_server_ip>/api/redoc/`
+*   **Schema:** `http://<your_server_ip>/api/schema/`
 
-### Phase 2: Product Catalog API
--   `feat(product): create serializers for all product models`
--   `feat(product): implement read-only API for product listing and detail`
--   `feat(product): add filtering, sorting, and pagination to product list`
--   `feat(product): implement admin-only viewset for product CRUD operations`
--   `test(product): add tests for public product API endpoints`
-
-### Phase 3: Shopping Cart Functionality
--   `feat(cart): create serializers for shopping cart and cart items`
--   `feat(cart): implement API views for managing the user's cart`
--   `fix(cart): ensure users can only access their own cart`
--   `test(cart): add tests for adding items and viewing the cart`
-
-### Phase 4: Optimization and Documentation
--   `perf(models): add database indexes to frequently filtered fields`
--   `docs(api): review and add detailed descriptions to Swagger documentation`
--   `refactor: improve code structure and maintainability`
+These interactive interfaces provide a clear overview of all available endpoints, their expected request/response formats, and allow for direct testing of the API.
