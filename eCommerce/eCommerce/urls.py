@@ -17,7 +17,7 @@ schema_view = get_schema_view(
       title="E-Commerce API",
       default_version='v1',
       description="API documentation for the E-Commerce backend project.",
-      contact=openapi.Contact(email="contact@example.com"),
+      contact=openapi.Contact(email="sibandallen@gmail.com"),
       license=openapi.License(name="BSD License"),
    ),
    public=True,
