@@ -126,7 +126,7 @@ Beyond specific tools, this program changed how I *think* about building softwar
 | [`ALXprodev-advanced_git`](https://www.github.com/alenstein/ALXprodev-advanced_git) | Version Control | Git Workflows, Branching Strategies |
 | [`ALXprodev-Devops`](https://www.github.com/alenstein/ALXprodev-Devops) | Shell Scripting & Automation | Bash, API Automation, Data Processing |
 
-# Capstone project - E_Commerce Backend 
+# Capstone project - E_Commerce Backend
 
 ## Overview
 
