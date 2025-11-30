@@ -32,7 +32,7 @@ jobs:
             # Create the .env file from secrets
             cat << EOF > .env
             SECRET_KEY=${{ secrets.SECRET_KEY }}
-            DEBUG=False
+            DEBUG=${{ secrets.DEBUG }}
             ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}
             DB_NAME=${{ secrets.DB_NAME }}
             DB_USER=${{ secrets.DB_USER }}
