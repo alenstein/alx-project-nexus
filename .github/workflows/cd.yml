@@ -23,8 +23,8 @@ jobs:
             # Exit immediately if any command fails
             set -e
 
-            # --- 1. Environment and Static Files Directory Setup ---
-            echo "--- Setting up project directories ---"
+            # --- 1. Environment Setup ---
+            echo "--- Setting up project directory and .env file ---"
             PROJECT_DIR="/home/ubuntu/ecommerce-backend"
             STATIC_DIR="/var/www/ecommerce/staticfiles"
             mkdir -p $PROJECT_DIR
@@ -73,11 +73,11 @@ jobs:
                 volumes:
                   - postgres_data:/var/lib/postgresql/data/
                 environment:
-                  POSTGRES_USER: \${DB_USER}
-                  POSTGRES_PASSWORD: \${DB_PASSWORD}
-                  POSTGRES_DB: \${DB_NAME}
+                  POSTGRES_USER: ${{ secrets.DB_USER }}
+                  POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
+                  POSTGRES_DB: ${{ secrets.DB_NAME }}
                 healthcheck:
-                  test: ["CMD-SHELL", "pg_isready -U \${DB_USER} -d \${DB_NAME}"]
+                  test: ["CMD-SHELL", "pg_isready -U ${{ secrets.DB_USER }} -d ${{ secrets.DB_NAME }}"]
                   interval: 5s
                   timeout: 5s
                   retries: 5
