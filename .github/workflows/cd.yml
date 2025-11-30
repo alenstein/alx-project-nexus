@@ -23,10 +23,14 @@ jobs:
             # Exit immediately if any command fails
             set -e
 
-            # --- 1. Environment Setup ---
-            echo "--- Setting up project directory and .env file ---"
+            # --- 1. Environment and Static Files Directory Setup ---
+            echo "--- Setting up project directories ---"
             PROJECT_DIR="/home/ubuntu/ecommerce-backend"
+            STATIC_DIR="/var/www/ecommerce/staticfiles"
             mkdir -p $PROJECT_DIR
+            sudo mkdir -p $STATIC_DIR
+            sudo chown -R www-data:www-data /var/www/ecommerce
+            sudo chmod -R 755 /var/www/ecommerce
             cd $PROJECT_DIR
 
             # Create the .env file from secrets
@@ -98,7 +102,7 @@ jobs:
                 ports:
                   - "8000:8000"
                 volumes:
-                  - ./staticfiles:/app/staticfiles
+                  - $STATIC_DIR:/app/staticfiles
                 env_file: .env
                 depends_on:
                   db:
@@ -127,12 +131,7 @@ jobs:
             echo "--- Starting all services with Docker Compose ---"
             docker-compose up -d
 
-            # --- 5. Set File Permissions ---
-            echo "--- Setting permissions for static files ---"
-            sudo chown -R www-data:www-data $PROJECT_DIR/staticfiles
-            sudo chmod -R 755 $PROJECT_DIR/staticfiles
-
-            # --- 6. Configure Nginx ---
+            # --- 5. Configure Nginx ---
             echo "--- Configuring and Restarting Nginx ---"
             sudo bash -c 'cat <<EOF > /etc/nginx/sites-available/ecommerce
             server {
@@ -140,7 +139,7 @@ jobs:
                 server_name ${{ secrets.EC2_HOST }};
 
                 location /static/ {
-                    alias /home/ubuntu/ecommerce-backend/staticfiles/;
+                    alias /var/www/ecommerce/staticfiles/;
                 }
 
                 location / {
